@@ -35,6 +35,9 @@
    control%attempts_max = 1000
    control%max_evals = 1000
    control%TRB_control%maxit = 10
+!   control%print_level = 1
+!   control%TRB_control%print_level = 1
+!   control%UGO_control%print_level = 1
 ! Solve the problem
    inform%status = 1                            ! set for initial entry
    CALL BGO_solve( nlp, control, inform, data, userdata, eval_F = FUN,         &

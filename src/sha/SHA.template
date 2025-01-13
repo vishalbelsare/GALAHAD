@@ -1,9 +1,13 @@
 ! error-printout-device                             6
 ! printout-device                                   6
 ! print-level                                       0
-! approximation-algorithm                           3
-! dense-linear-solver                               1
-! maximum-degree-considered-sparse                  50
+! approximation-algorithm                           4
+! dense-linear-solver                               3
+! extra-differences                                 1
+! maximum-degree-considered-sparse                  100
+! maximum-recursion-levels                          25
+! recursion-entries-required                        10
+! average-off-diagonals                             no
 ! space-critical                                    no
 ! deallocate-error-fatal                            no
 ! output-line-prefix                                ""

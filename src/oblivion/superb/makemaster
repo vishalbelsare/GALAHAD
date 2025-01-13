@@ -1,10 +1,10 @@
 #  Main body of the installation makefile for the GALAHAD SUPERB package
 
-#  Nick Gould, for GALAHAD productions 
+#  Nick Gould, for GALAHAD productions
 #  This version: 2021-05-30
 
 #  include standard GALAHAD makefile defaults before package-specifics
- 
+
 include $(GALAHAD)/src/makedefs/defaults
 
 #  ===========================================================================
@@ -18,15 +18,11 @@ PACKAGE = SUPERB
 
 #  auxiliary packages that current package depends on (prepend with make_)
 
-DEPENDENCIES = make_sbls_deps make_sbls make_lms make_rand \
-               make_gltr make_lpqp make_fdc make_fit \
-               make_qpp make_trans make_scale make_scu \
-               make_ir make_mop make_cro make_presolve \
-               make_qpd make_wcp make_ptrans
+DEPENDENCIES = make_qpd_deps make_qpd make_wcp make_ptrans
 
 #  other packages that depend on package
 
-DEPENDS = 
+DEPENDS =
 
 #  auxiliary packages that are needed for tests (prepend with make_)
 
@@ -47,17 +43,53 @@ CUTEST_EXAMPLE = QPBAND.SIF
 #  ===========================================================================
 
 #  include standard GALAHAD makefile definitions
- 
+
 include $(GALAHAD)/src/makedefs/definitions
 
 #  include compilation and run instructions
- 
+
 include $(GALAHAD)/src/makedefs/instructions
 
-#  include standard package compilation instructions
+#  non-standard package compilation instructions
 
-include $(GALAHAD)/src/makedefs/compile
+#  package compilation
+
+$(package).o: $(LG)($(package)_$(PRECIS).o)
+
+$(LG)($(package)_$(PRECIS).o): ../$(package)/$(package).F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)   "
+	$(CP) ../$(package)/$(package).F90 $(OBJ)/$(package).F90
+	cd $(OBJ); $(FORTRAN) -o $(package)_$(PRECIS).o \
+                     $(FFLAGSS)  -I $(CUTEST)/include $(package).F90 \
+                || ( printf ' %-26s' "=> Disabling optimization " ; \
+                   $(FORTRAN) -o $(package)_$(PRECIS).o \
+                     $(FFLAGSN)  -I $(CUTEST)/include $(package).F90 )
+	cd $(OBJ); $(ARR) $(package)_$(PRECIS).o ; \
+           $(RM) $(package).F90 $(package)_$(PRECIS).o
+	$(RMARFILES) $(DEPENDS)
+	$(CURMARFILE) use$(package)_$(PRECIS).o
+	$(MVMODS)
+	@printf '[ OK ]\n'
+
+#  CUTEst/AMPL interfaces
+
+use$(package).o: $(CULG)(use$(package)_$(PRECIS).o)
+
+$(CULG)(use$(package)_$(PRECIS).o): ../$(package)/use$(package).F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "use$(package)   "
+	$(CP) ../$(package)/use$(package).F90 $(OBJ)/use$(package).F90
+	cd $(OBJ); \
+          $(FORTRAN) -o use$(package)_$(PRECIS).o \
+                     $(FFLAGSOMP) -I $(CUTEST)/include use$(package).F90 \
+                || ( printf ' %-26s' "=> Disabling optimization " ; \
+                   $(FORTRAN) -o use$(package)_$(PRECIS).o \
+                      $(FFLAGSN)  -I $(CUTEST)/include use$(package).F90 )
+	cd $(OBJ); $(CUARR) use$(package)_$(PRECIS).o ; \
+                   $(RM) use$(package).F90 use$(package)_$(PRECIS).o
+	$(RMOBFILE) run$(package)_sif_$(PRECIS).o
+	$(MVMODS)
+	@printf '[ OK ]\n'
 
 #  include required package intermediaries
- 
+
 include $(GALAHAD)/src/makedefs/intermediaries

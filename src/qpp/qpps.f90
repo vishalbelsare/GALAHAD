@@ -4,16 +4,16 @@
    IMPLICIT NONE
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 ) ! set precision
    REAL ( KIND = wp ), PARAMETER :: infinity = 10.0_wp ** 20
-   TYPE ( QPP_dims_type ) :: d
+   TYPE ( QPT_dimensions_type ) :: d
    TYPE ( QPP_map_type ) :: map
-   TYPE ( QPP_control_type ) :: control        
+   TYPE ( QPP_control_type ) :: control
    TYPE ( QPP_inform_type ) :: info
    TYPE ( QPT_problem_type ) :: p
    INTEGER :: i, j, s
    INTEGER, PARAMETER :: n = 4, m = 2, h_ne = 5, a_ne = 5
    REAL ( KIND = wp ) :: X_orig( n )
 ! sparse co-ordinate storage format
-   CALL SMT_put( p%H%type, 'COORDINATE', s )  ! Specify co-ordinate 
+   CALL SMT_put( p%H%type, 'COORDINATE', s )  ! Specify co-ordinate
    CALL SMT_put( p%A%type, 'COORDINATE', s )  ! storage for H and A
    ALLOCATE( p%H%val( h_ne ), p%H%row( h_ne ), p%H%col( h_ne ) )
    ALLOCATE( p%A%val( a_ne ), p%A%row( a_ne ), p%A%col( a_ne ) )
@@ -33,7 +33,7 @@
 !  p%H%ptr = (/ 1, 2, 3, 5, 6 /)                           ! Set row pointers
 !  p%A%val = (/ 2.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp /)  ! Jacobian A
 !  p%A%col = (/ 1, 2, 2, 3, 4 /)
-!  p%A%ptr = (/ 1, 3, 6 /)                                 ! Set row pointers  
+!  p%A%ptr = (/ 1, 3, 6 /)                                 ! Set row pointers
 ! dense storage format
 !  CALL SMT_put( p%H%type, 'DENSE', s )  ! Specify dense
 !  CALL SMT_put( p%A%type, 'DENSE', s )  ! storage for H and A
@@ -66,22 +66,28 @@
    WRITE( 6, "( /, 5X, 'i', 6x, 'v', 11X, 'l', 11X, 'u', 11X, 'z', 11X,        &
   &            'g', 6X, 'type' )" )
    DO i = 1, d%x_free                      ! free variables
-     WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ), '  '
+     WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ),   &
+                   '  '
    END DO
    DO i = d%x_free + 1, d%x_l_start - 1    ! non-negativities
-    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ), '0< '
+    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ),    &
+                   '0< '
    END DO
    DO i = d%x_l_start, d%x_u_start - 1     ! lower-bounded variables
-    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ), 'l< '
+    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ),    &
+                   'l< '
    END DO
    DO i = d%x_u_start, d%x_l_end           ! range-bounded variables
-    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ), 'l<u'
+    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ),    &
+                   'l<u'
    END DO
    DO i = d%x_l_end + 1, d%x_u_end         ! upper-bounded variables
-    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ), ' <u'
+    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ),    &
+                   ' <u'
    END DO
    DO i = d%x_u_end + 1, p%n                ! non-positivities
-    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ), ' <0'
+    WRITE( 6, 10 ) i, p%X( i ), p%X_l( i ), p%X_u( i ), p%Z( i ), p%G( i ),    &
+                   ' <0'
    END DO
 ! re-ordered constraints
    WRITE( 6, "( /, 5X,'i', 5x, 'A*v', 10X, 'l', 11X, 'u', 11X, 'y',            &
@@ -111,7 +117,7 @@
 ! change upper bound
    p%C_u( 1 ) = 3.0_wp
 ! reorder new problem
-   CALL QPP_apply( map, info, p, get_c_bounds = .TRUE. ) 
+   CALL QPP_apply( map, info, p, get_c_bounds = .TRUE. )
 ! re-ordered new constraints
    WRITE( 6, "( /, 5X,'i', 5x, 'A*v', 10X, 'l', 11X, 'u', 11X, 'y',            &
   &                6X, 'type' )" )

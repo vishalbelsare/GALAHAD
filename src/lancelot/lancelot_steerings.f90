@@ -1,10 +1,11 @@
-! THIS VERSION: GALAHAD 2.1 - 22/03/2007 AT 09:00 GMT.
+! THIS VERSION: GALAHAD 4.3 - 2024-02-02 AT 14:40 GMT.
    SUBROUTINE RANGE( ielemn, transp, W1, W2, nelvar, ninvar, ieltyp, lw1, lw2 )
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 ) ! set precision
-   INTEGER, INTENT( IN ) :: ielemn, nelvar, ninvar, ieltyp, lw1, lw2
+   INTEGER, INTENT( IN ) :: ielemn, nelvar, ninvar, ieltyp
+   INTEGER, INTENT( IN ) :: lw1, lw2
    LOGICAL, INTENT( IN ) :: transp
-   REAL ( KIND = wp ), INTENT( IN ), DIMENSION ( lw1 ) :: W1
-   REAL ( KIND = wp ), INTENT( OUT ), DIMENSION ( lw2 ) :: W2
+   REAL ( KIND = wp ), INTENT( IN ), DIMENSION( lw1 ) :: W1
+   REAL ( KIND = wp ), INTENT( OUT ), DIMENSION( lw2 ) :: W2
    SELECT CASE ( ieltyp )
    CASE ( 1 ) ! Element type 1 has a non-trivial transformation
      IF ( transp ) THEN
@@ -19,26 +20,29 @@
    END SELECT
    RETURN
    END SUBROUTINE RANGE
-   
+
    SUBROUTINE ELFUN ( FUVALS, XVALUE, EPVALU, ncalcf, ITYPEE, ISTAEV,          &
                       IELVAR, INTVAR, ISTADH, ISTEPA, ICALCF, ltypee,          &
                       lstaev, lelvar, lntvar, lstadh, lstepa, lcalcf,          &
                       lfuval, lxvalu, lepvlu, ifflag, ifstat )
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 ) ! set precision
-   INTEGER, INTENT( IN ) :: ncalcf, ifflag, ltypee, lstaev, lelvar, lntvar
-   INTEGER, INTENT( IN ) :: lstadh, lstepa, lcalcf, lfuval, lxvalu, lepvlu
+   INTEGER, INTENT( IN ) :: ncalcf, ifflag, ltypee, lstaev
+   INTEGER, INTENT( IN ) :: lelvar, lntvar, lstadh, lstepa
+   INTEGER, INTENT( IN ) :: lcalcf, lfuval, lxvalu, lepvlu
    INTEGER, INTENT( OUT ) :: ifstat
-   INTEGER, INTENT( IN ) :: ITYPEE( LTYPEE ), ISTAEV( LSTAEV ), IELVAR( LELVAR )
-   INTEGER, INTENT( IN ) :: INTVAR( LNTVAR ), ISTADH( LSTADH ), ISTEPA( LSTEPA )
+   INTEGER, INTENT( IN ) :: ITYPEE( LTYPEE ), ISTAEV( LSTAEV )
+   INTEGER, INTENT( IN ) :: IELVAR( LELVAR ), INTVAR( LNTVAR )
+   INTEGER, INTENT( IN ) :: ISTADH( LSTADH ), ISTEPA( LSTEPA )
    INTEGER, INTENT( IN ) :: ICALCF( LCALCF )
    REAL ( KIND = wp ), INTENT( IN ) :: XVALUE( LXVALU )
    REAL ( KIND = wp ), INTENT( IN ) :: EPVALU( LEPVLU )
    REAL ( KIND = wp ), INTENT( INOUT ) :: FUVALS( LFUVAL )
-   INTEGER :: ielemn, ieltyp, ihstrt, ilstrt, igstrt, ipstrt, jcalcf
+   INTEGER :: ielemn, ieltyp, ihstrt, ilstrt, igstrt, ipstrt
+   INTEGER :: jcalcf
    REAL ( KIND = wp ) :: v1, v2, u1, u2, u3, cs, sn
    ifstat = 0
    DO jcalcf = 1, ncalcf
-     ielemn = ICALCF( jcalcf ) 
+     ielemn = ICALCF( jcalcf )
      ilstrt = ISTAEV( ielemn ) - 1
      igstrt = INTVAR( ielemn ) - 1
      ipstrt = ISTEPA( ielemn ) - 1
@@ -81,22 +85,22 @@
      END SELECT
    END DO
    RETURN
-   END SUBROUTINE ELFUN 
-   
+   END SUBROUTINE ELFUN
+
    SUBROUTINE GROUP ( GVALUE, lgvalu, FVALUE, GPVALU, ncalcg,                  &
                       ITYPEG, ISTGPA, ICALCG, ltypeg, lstgpa,                  &
-                      lcalcg, lfvalu, lgpvlu, derivs, igstat )              
+                      lcalcg, lfvalu, lgpvlu, derivs, igstat )
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 ) ! set precision
-   INTEGER, INTENT( IN ) :: lgvalu, ncalcg
-   INTEGER, INTENT( IN ) :: ltypeg, lstgpa, lcalcg, lfvalu, lgpvlu          
+   INTEGER, INTENT( IN ) :: lgvalu, ncalcg, ltypeg, lstgpa
+   INTEGER, INTENT( IN ) :: lcalcg, lfvalu, lgpvlu
    INTEGER, INTENT( OUT ) :: igstat
-   LOGICAL, INTENT( IN ) :: derivs                                          
-   INTEGER, INTENT( IN ), DIMENSION ( ltypeg ) :: ITYPEG                    
-   INTEGER, INTENT( IN ), DIMENSION ( lstgpa ) :: ISTGPA                    
-   INTEGER, INTENT( IN ), DIMENSION ( lcalcg ) :: ICALCG                    
-   REAL ( KIND = wp ), INTENT( IN ), DIMENSION ( lfvalu ) :: FVALUE           
-   REAL ( KIND = wp ), INTENT( IN ), DIMENSION ( lgpvlu ) :: GPVALU           
-   REAL ( KIND = wp ), INTENT( INOUT ), DIMENSION ( lgvalu, 3 ) :: GVALUE
+   LOGICAL, INTENT( IN ) :: derivs
+   INTEGER, INTENT( IN ), DIMENSION( ltypeg ) :: ITYPEG
+   INTEGER, INTENT( IN ), DIMENSION( lstgpa ) :: ISTGPA
+   INTEGER, INTENT( IN ), DIMENSION( lcalcg ) :: ICALCG
+   REAL ( KIND = wp ), INTENT( IN ), DIMENSION( lfvalu ) :: FVALUE
+   REAL ( KIND = wp ), INTENT( IN ), DIMENSION( lgpvlu ) :: GPVALU
+   REAL ( KIND = wp ), INTENT( INOUT ), DIMENSION( lgvalu, 3 ) :: GVALUE
    INTEGER :: igrtyp, igroup, ipstrt, jcalcg
    REAL ( KIND = wp ) :: alpha, alpha2
    igstat = 0
@@ -137,7 +141,7 @@
    END SUBROUTINE GROUP
 
    PROGRAM LANCELOT_example
-   USE LANCELOT_steering_double              ! double precision version
+   USE LANCELOTST_double
    IMPLICIT NONE
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 ) ! set precision
    REAL ( KIND = wp ), PARAMETER :: infinity = 10.0_wp ** 20
@@ -146,7 +150,8 @@
    TYPE ( LANCELOT_data_type ) :: data
    TYPE ( LANCELOT_problem_type ) :: prob
    INTEGER :: i, lfuval
-   INTEGER, PARAMETER :: n = 3, ng = 6, nel = 3, nnza = 4, nvrels = 7
+   INTEGER, PARAMETER :: n = 3, ng = 6, nel = 3
+   INTEGER, PARAMETER :: nnza = 4, nvrels = 7
    INTEGER, PARAMETER :: ntotel = 3, ngpvlu = 0, nepvlu = 0
    INTEGER :: IVAR( n ), ICALCF( nel ), ICALCG( ng )
    REAL ( KIND = wp ) :: Q( n ), XT( n ), DGRAD( n ), FVALUE( ng )
@@ -154,7 +159,7 @@
    REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: FUVALS
    EXTERNAL RANGE, ELFUN, GROUP
 ! make space for problem data
-   prob%n = n ; prob%ng = ng ; prob%nel = nel 
+   prob%n = n ; prob%ng = ng ; prob%nel = nel
    ALLOCATE( prob%ISTADG( prob%ng + 1 ), prob%ISTGPA( prob%ng + 1 ) )
    ALLOCATE( prob%ISTADA( prob%ng + 1 ), prob%ISTAEV( prob%nel + 1 ) )
    ALLOCATE( prob%ISTEPA( prob%nel + 1 ), prob%ITYPEG( prob%ng ) )
@@ -208,7 +213,7 @@
    CALL LANCELOT_solve(                                                        &
        prob, RANGE, GVALUE, FVALUE, XT, FUVALS, lfuval, ICALCF, ICALCG,        &
        IVAR, Q, DGRAD, control, info, data, ELFUN  = ELFUN , GROUP = GROUP )
-!  DO 
+!  DO
 !    CALL LANCELOT_solve(                                                 &
 !        prob, RANGE, GVALUE, FVALUE, XT, FUVALS, lfuval, ICALCF, ICALCG, &
 !        IVAR, Q, DGRAD , control, info, data )
@@ -221,7 +226,7 @@
 !          prob%nel + 1, prob%nel + 1, prob%nel + 1, prob%nel, lfuval, prob%n, &
 !          prob%ISTEPA( prob%nel + 1 ) - 1, 1, i )
 !      IF ( i /= 0 ) THEN ; info%status = - 11 ; CYCLE ; END IF
-!    END IF  
+!    END IF
 !    IF ( info%status == - 1 .OR. info%status == - 5 .OR. info%status == - 6 ) &
 !      THEN
 !      CALL ELFUN ( FUVALS, XT, prob%EPVALU, info%ncalcf, prob%ITYPEE,         &
@@ -230,19 +235,19 @@
 !          prob%nel + 1, prob%nel + 1, prob%nel + 1, prob%nel, lfuval, prob%n, &
 !          prob%ISTEPA( prob%nel + 1 ) - 1, 3, i )
 !      IF ( i /= 0 ) THEN ; info%status = - 11 ; CYCLE ; END IF
-!    END IF  
+!    END IF
 !    IF ( info%status == - 2 .OR. info%status == - 4 ) THEN
 !      CALL GROUP ( GVALUE, prob%ng, FVALUE, prob%GPVALU, info%ncalcg,         &
 !          prob%ITYPEG, prob%ISTGPA, ICALCG, prob%ng, prob%ng + 1, prob%ng,    &
 !          prob%ng, prob%ISTGPA( prob%ng + 1 ) - 1, .FALSE., i )
 !      IF ( i /= 0 ) THEN ; info%status = - 11 ; CYCLE ; END IF
-!    END IF  
+!    END IF
 !    IF ( info%status == - 2 .OR. info%status == - 5 ) THEN
 !      CALL GROUP( GVALUE, prob%ng, FVALUE, prob%GPVALU, info%ncalcg,          &
 !          prob%ITYPEG, prob%ISTGPA, ICALCG, prob%ng, prob%ng + 1, prob%ng,    &
 !          prob%ng, prob%ISTGPA( prob%ng + 1 ) - 1, .TRUE., i )
 !      IF ( i /= 0 ) THEN ; info%status = - 11 ; CYCLE ; END IF
-!    END IF  
+!    END IF
 !  END DO
 ! act on return status
    IF ( info%status == 0 ) THEN                  !  Successful return

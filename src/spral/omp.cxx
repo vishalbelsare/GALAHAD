@@ -6,9 +6,7 @@
  *  \brief
  *  Additional support functions and wrappers for OpenMP.
  */
-#include "omp.hxx"
-
-#include <cstdio>
+#include "spral_omp.hxx"
 
 /* This file wraps the C interface for OpenMP in C++ for style/safety */
 namespace spral { namespace omp {

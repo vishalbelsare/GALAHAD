@@ -1,24 +1,28 @@
-.TH "cro.h" 3 "Sun Mar 20 2022" "C interfaces to GALAHAD CRO" \" -*- nroff -*-
+.TH "galahad_cro.h" 3 "Thu Jun 22 2023" "C interfaces to GALAHAD CRO" \" -*- nroff -*-
 .ad l
 .nh
 .SH NAME
-cro.h
+galahad_cro.h
 .SH SYNOPSIS
 .br
 .PP
 \fC#include <stdbool\&.h>\fP
 .br
+\fC#include <stdint\&.h>\fP
+.br
 \fC#include 'galahad_precision\&.h'\fP
 .br
-\fC#include 'sls\&.h'\fP
+\fC#include 'galahad_cfunctions\&.h'\fP
 .br
-\fC#include 'sbls\&.h'\fP
+\fC#include 'galahad_sls\&.h'\fP
 .br
-\fC#include 'uls\&.h'\fP
+\fC#include 'galahad_sbls\&.h'\fP
 .br
-\fC#include 'ir\&.h'\fP
+\fC#include 'galahad_uls\&.h'\fP
 .br
-\fC#include 'scu\&.h'\fP
+\fC#include 'galahad_ir\&.h'\fP
+.br
+\fC#include 'galahad_scu\&.h'\fP
 .br
 
 .SS "Data Structures"
@@ -44,7 +48,7 @@ cro.h
 .RI "void \fBcro_read_specfile\fP (struct \fBcro_control_type\fP *control, const char specfile[])"
 .br
 .ti -1c
-.RI "void \fBcro_crossover_solution\fP (struct \fBcro_control_type\fP *control, void **data, struct \fBcro_inform_type\fP *inform, int n, int m, int m_equal, const real_wp_ H_val[], const int H_col[], const int H_ptr[], const real_wp_ A_val[], const int A_col[], const int A_ptr[], const real_wp_ g[], const real_wp_ c_l[], const real_wp_ c_u[], const real_wp_ x_l[], const real_wp_ x_u[], real_wp_ x[], real_wp_ c[], real_wp_ y[], real_wp_ z[], int x_stat[], int c_stat[])"
+.RI "void \fBcro_crossover_solution\fP (void **data, struct \fBcro_control_type\fP *control, struct \fBcro_inform_type\fP *inform, int n, int m, int m_equal, int h_ne, const real_wp_ H_val[], const int H_col[], const int H_ptr[], int a_ne, const real_wp_ A_val[], const int A_col[], const int A_ptr[], const real_wp_ g[], const real_wp_ c_l[], const real_wp_ c_u[], const real_wp_ x_l[], const real_wp_ x_u[], real_wp_ x[], real_wp_ c[], real_wp_ y[], real_wp_ z[], int x_stat[], int c_stat[])"
 .br
 .ti -1c
 .RI "void \fBcro_terminate\fP (void **data, struct \fBcro_control_type\fP *control, struct \fBcro_inform_type\fP *inform)"
@@ -73,6 +77,8 @@ Provides a \fBcrossover\fP from a solution to the \fBconvex quadratic programmin
 N\&. I\&. M\&. Gould, STFC-Rutherford Appleton Laboratory, England\&.
 .PP
 C interface, additionally J\&. Fowkes, STFC-Rutherford Appleton Laboratory\&.
+.PP
+Julia interface, additionally A\&. Montoison and D\&. Orban, Polytechnique Montréal\&.
 .SS "Originally released"
 August 2010, C interface January 2022\&.
 .SS "Terminology"
@@ -86,11 +92,11 @@ Any required solution x necessarily satisfies the primal optimality conditions \
   \n
  the dual optimality conditions \[\mbox{(2a) $\hspace{58mm} H x + g = A^T y + z\hspace{58mm}$}\]  
   \n
-  (2a) H x + g = A^T y + z 
+  (2a) H x + g = A^T y + z
   \n
  where \[\mbox{(2b) $\hspace{24mm} y = y^l + y^u, \;\; z = z^l + z^u, \,\, y^l >= 0 , \;\; y^u <= 0 , \;\; z^l >= 0 \;\; \mbox{and} \;\; z^u <= 0,\hspace{24mm}$} \]  
   \n
-   (2b) y = y^l + y^u, z = z^l + z^u, y^l \[>=] 0, y^u \[<=] 0, 
+   (2b) y = y^l + y^u, z = z^l + z^u, y^l \[>=] 0, y^u \[<=] 0,
         z^l \[>=] 0 and z^u \[<=] 0,
   \n
  and the complementary slackness conditions \[\mbox{(3) $\hspace{12mm} ( A x - c^l )^T y^l = 0 ,\;\; ( A x - c^u )^T y^u = 0 ,\;\; (x -x^l )^T z^l = 0 \;\; \mbox{and} \;\; (x -x^u )^T z^u = 0,\hspace{12mm} $}\]  
@@ -103,7 +109,7 @@ Any required solution x necessarily satisfies the primal optimality conditions \
 Denote the active constraints by A_A x = c_A and the active bounds by I_A x = x_A\&. Then any optimal solution satisfies the linear system \[\left(\begin{array}{ccc}H & - A_A^T & - I^T_A \\ A_A & 0 & 0 \\ I_A & 0 & 0 \end{array}\right) \left(\begin{array}{c}x \\ y_A \\ z_A\end{array}\right) = \left(\begin{array}{c}- g \\ c_A \\ x_A\end{array}\right).\]  
   \n
        ( H   - A_A^T - I_A^T ) (  x  )   ( - g )
-       ( A_A     0       0   ) ( y_A ) = ( c_A ), 
+       ( A_A     0       0   ) ( y_A ) = ( c_A ),
        ( I_A     0       0   ) ( z_A )   ( x_A )
   \n
  where y_A and z_A are the corresponding active Lagrange multipliers and dual variables respectively\&. Consequently the difference between any two solutions (Delta x, Delta y, Delta z) must satisfy \[\mbox{(4)}\;\; \left(\begin{array}{ccc}H & - A_A^T & - I^T_A \\ A_A & 0 & 0 \\ I_A & 0 & 0 \end{array}\right) \left(\begin{array}{c}Delta x \\ Delta y_A \\ Delta z_A\end{array}\right) = 0.\]  
@@ -120,9 +126,9 @@ Denote the active constraints by A_A x = c_A and the active bounds by I_A x = x_
   \n
  is non-singular and the \fBnon-basic\fP constraints A_N^T and I_N^T are linearly dependent on the \fBbasic\fP ones ( A_B^T \\;\\; I_B^T)\&. In this case (4) is equivalent to \[\mbox{(5)}\;\; \left(\begin{array}{ccc}H & - A_B^T & - I_B^T \\ A_B & 0 & 0 \\ I_B & 0 & 0 \end{array}\right) = \left(\begin{array}{c}A_N^T \\ 0 \\ 0\end{array}\right) Delta y_N + \left(\begin{array}{c}I_N^T \\ 0 \\ 0\end{array}\right) Delta z_N\]  
   \n
-          ( H   - A_B^T - I_B^T ) (  Delta x  )   
-  (5)     ( A_B     0       0   ) ( Delta y_A ) = 
-          ( I_B     0       0   ) ( Delta z_A )   
+          ( H   - A_B^T - I_B^T ) (  Delta x  )
+  (5)     ( A_B     0       0   ) ( Delta y_A ) =
+          ( I_B     0       0   ) ( Delta z_A )
 
             ( A_N^T )             ( I_N^T )
             (   0   ) Delta y_N + (   0   ) Delta z_N.
@@ -256,7 +262,7 @@ int \fIstatus\fP return status\&. See CRO_solve for details
 int \fIalloc_status\fP the status of the last attempted allocation/deallocation 
 .br
 .PP
-char \fIbad_alloc[81]\fP the name of the array for which an allocation/deallocation error ocurred 
+char \fIbad_alloc[81]\fP the name of the array for which an allocation/deallocation error occurred 
 .br
 .PP
 int \fIdependent\fP the number of dependent active constraints 
@@ -316,7 +322,7 @@ Read the content of a specification file, and assign values associated with give
 .RE
 .PP
 
-.SS "void cro_crossover_solution (struct \fBcro_control_type\fP * control, void ** data, struct \fBcro_inform_type\fP * inform, int n, int m, int m_equal, const real_wp_ H_val[], const int H_col[], const int H_ptr[], const real_wp_ A_val[], const int A_col[], const int A_ptr[], const real_wp_ g[], const real_wp_ c_l[], const real_wp_ c_u[], const real_wp_ x_l[], const real_wp_ x_u[], real_wp_ x[], real_wp_ c[], real_wp_ y[], real_wp_ z[], int x_stat[], int c_stat[])"
+.SS "void cro_crossover_solution (void ** data, struct \fBcro_control_type\fP * control, struct \fBcro_inform_type\fP * inform, int n, int m, int m_equal, int h_ne, const real_wp_ H_val[], const int H_col[], const int H_ptr[], int a_ne, const real_wp_ A_val[], const int A_col[], const int A_ptr[], const real_wp_ g[], const real_wp_ c_l[], const real_wp_ c_u[], const real_wp_ x_l[], const real_wp_ x_u[], real_wp_ x[], real_wp_ c[], real_wp_ y[], real_wp_ z[], int x_stat[], int c_stat[])"
 Crosover the solution from a primal-dual to a basic one\&.
 .PP
 \fBParameters\fP
@@ -360,11 +366,15 @@ Crosover the solution from a primal-dual to a basic one\&.
 .br
 \fIm_equal\fP is a scalar variable of type int, that holds the number of general linear equality constraints\&. Such constraints must occur first in A\&.
 .br
-\fIH_val\fP is a one-dimensional array of type double, that holds the values of the entries of the \fBlower triangular \fPpart of the Hessian matrix H\&. The entries are stored by consecutive rows, the order within each row is unimportant\&.
+\fIh_ne\fP is a scalar variable of type int, that holds the number of entries in the \fBlower triangular\fP part of the Hessian matrix H\&.
+.br
+\fIH_val\fP is a one-dimensional array of type double, that holds the values of the entries of the lower triangular part of the Hessian matrix H\&. The entries are stored by consecutive rows, the order within each row is unimportant\&.
 .br
 \fIH_col\fP is a one-dimensional array of type int, that holds the column indices of the lower triangular part of H, in the same order as those in H_val\&.
 .br
 \fIH_ptr\fP is a one-dimensional array of size n+1 and type int, that holds the starting position of each row of the lower triangular part of H\&. The n+1-st component holds the total number of entries (plus one if fortran indexing is used)\&.
+.br
+\fIa_ne\fP is a scalar variable of type int, that holds the number of entries in the constraint Jacobian matrix A\&.
 .br
 \fIA_val\fP is a one-dimensional array of type double, that holds the values of the entries of the constraint Jacobian matrix A\&. The entries are stored by consecutive rows, the order within each row is unimportant\&. \fBEquality constraints must be ordered first\&.\fP
 .br

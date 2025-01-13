@@ -1,0 +1,137 @@
+#  Main body of the installation makefile for the Pardiso stub
+
+#  N. Gould, D. Orban and Ph. L. Toint.
+#  This version: 2024-11-14
+
+#  include standard GALAHAD makefile definitions
+
+include $(GALAHAD)/src/makedefs/definitions
+
+#  Libraries used
+
+LIBS = -lgalahad $(PARDISO) $(LAPACK) $(BLAS)
+PLIBS = $(LIBS) -lgalahad_problem
+
+#  compilation agenda
+
+BASICZ = blas lapack symbols dummy blas_inter lapack_inter
+
+PARDISOS = $(BASICSZ) $(PLGS)(pardiso.o)
+PARDISOD = $(BASICSZ) $(PLGD)(pardiso.o)
+PARDISOQ = $(BASICSZ) $(PLGQ)(pardiso.o)
+PARDISOS64 = $(BASICSZ) $(PLGS64)(pardiso.o)
+PARDISOD64 = $(BASICSZ) $(PLGD64)(pardiso.o)
+PARDISOQ64 = $(BASICSZ) $(PLGQ64)(pardiso.o)
+
+PARDISOST = $(PARDISOS) $(OBJ)/pardisot.o
+PARDISODT = $(PARDISOD) $(OBJ)/pardisot.o
+PARDISOQT = $(PARDISOD) $(OBJ)/pardisoq.o
+
+RPARDISOST = $(OBJ)/pardisot.o -L$(OBJ) $(LIBS)
+RPARDISODT = $(OBJ)/pardisot.o -L$(OBJ) $(LIBS)
+RPARDISODQ = $(OBJ)/pardisoq.o -L$(OBJ) $(LIBS)
+
+#  pardiso
+
+pardiso_silent: pardiso_$(PRECIS)
+pardiso: pardiso_$(PRECIS)
+	@printf ' %-21s\n' "GALAHAD: $(PARDISO) ($(PRECIS) $(SUCC)"
+pardiso_single: $(PARDISOS)
+	$(RANLIB) $(PLGS)
+pardiso_double: $(PARDISOD)
+	$(RANLIB) $(PLGD)
+pardiso_quadruple: $(PARDISOQ)
+	$(RANLIB) $(PLGQ)
+pardiso_single_64: $(PARDISOS64)
+	$(RANLIB) $(PLGS64)
+pardiso_double_64: $(PARDISOD64)
+	$(RANLIB) $(PLGD64)
+pardiso_quadruple_64: $(PARDISOQ64)
+	$(RANLIB) $(PLGQ64)
+
+#  tests
+
+pardisodt: $(PARDISODT)
+	echo " Exhaustive test of subroutine interface to pardiso"
+	cd ../pardiso ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_pardiso \
+                         $(RPARDISODT)
+#	- ../pardiso/run_pardiso > ../pardiso/pardisodt.output 2>&1
+#	cat ../pardiso/pardisodt.output
+	- ../pardiso/run_pardiso
+	rm ../pardiso/run_pardiso
+
+pardisost: $(PARDISOST)
+	echo " Exhaustive test of subroutine interface to pardiso"
+	cd ../pardiso ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_pardiso \
+                         $(RPARDISOST)
+	- ../pardiso/run_pardiso > ../pardiso/pardisost.output 2>&1
+	cat ../pardiso/pardisost.output
+	rm ../pardiso/run_pardiso
+
+pardisosq: $(PARDISOQT)
+	echo " Exhaustive test of subroutine interface to pardiso"
+	cd ../pardiso ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_pardiso \
+                         $(RPARDISOQT)
+	- ../pardiso/run_pardiso > ../pardiso/pardisoqt.output 2>&1
+	cat ../pardiso/pardisoqt.output
+	rm ../pardiso/run_pardiso
+
+#  blas and lapack generic packages and interfaces
+
+blas:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            blas_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+lapack:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            lapack_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+symbols:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            symbols_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+dummy:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            dummy_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+blas_inter:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            blas_inter_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+lapack_inter:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            lapack_inter_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+#  individual compilations
+
+pardiso.o: $(PLG)(pardiso.o)
+
+$(PLG)(pardiso.o): ../../dum/pardiso.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "pardiso  "
+	$(CP) ../../dum/pardiso.F90 $(OBJ)/pardiso.F90
+	cd $(OBJ); $(FORTRAN) -o pardiso.o $(FFLAGS) pardiso.F90
+	cd $(OBJ); $(PARR) pardiso.o ; $(RM) pardiso.F90 pardiso.o
+	$(RANLIB) $(PLG)
+	@printf '[ OK ]\n'
+
+#  test programs
+
+pardisot.o: $(OBJ)/pardisot.o
+
+$(OBJ)/pardisot.o: ../pardiso/pardisot.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "pardisot  "
+	$(SED) -f $(SEDS) ../pardiso/pardisot.F90 > $(OBJ)/pardisot.F90
+	cd $(OBJ) ; $(FORTRAN) -o pardisot.o $(FFLAGSS) pardisot.F90
+	@printf '[ OK ]\n'
+
+#  book keeping
+
+clean:
+	@printf ' %-9s\t\t' "Cleaning"
+	$(RM) $(PLG) $(OBJ)/pardisos.o $(OBJ)/pardisot.o
+	@printf '[ OK ]\n'
+
+cleanall:
+	@printf ' %-14s\t\t' "Removing all $(PRECIS) precision object and module files"
+	$(RM) -r $(OBJ)/* $(MOD)/*
+	@printf '[ OK ]\n'

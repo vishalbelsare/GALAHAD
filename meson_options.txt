@@ -1,0 +1,199 @@
+option('modules',
+       type : 'boolean',
+       value : true,
+       description : 'option to install Fortran modules')
+
+option('ciface',
+       type : 'boolean',
+       value : true,
+       description : 'whether to build the C interfaces')
+
+option('pythoniface',
+       type : 'boolean',
+       value : false,
+       description : 'whether to build the Python interfaces in double precision')
+
+option('examples',
+       type : 'boolean',
+       value : false,
+       description : 'whether to generate the examples')
+
+option('tests',
+       type : 'boolean',
+       value : false,
+       description : 'whether to generate the tests')
+
+option('binaries',
+       type : 'boolean',
+       value : false,
+       description : 'whether to generate the binaries')
+
+option('single',
+       type : 'boolean',
+       value : true,
+       description : 'whether to generate the single precision library, tests and examples')
+
+option('double',
+       type : 'boolean',
+       value : true,
+       description : 'whether to generate the double precision library, tests and examples')
+
+option('quadruple',
+       type : 'boolean',
+       value : false,
+       description : 'whether to generate the quadruple precision library, tests and examples')
+
+option('ssids',
+       type : 'boolean',
+       value : true,
+       description : 'whether to build ssids')
+
+option('libblas',
+       type : 'string',
+       value : 'openblas',
+       description : 'BLAS library against which to link')
+
+option('liblapack',
+       type : 'string',
+       value : 'openblas',
+       description : 'LAPACK library against which to link')
+
+option('libhsl',
+       type : 'string',
+       value : 'hsl_subset',
+       description : 'HSL library against which to link')
+
+option('libcutest_single',
+       type : 'string',
+       value : 'cutest_single',
+       description : 'CUTEST library in single precision against which to link')
+
+option('libcutest_double',
+       type : 'string',
+       value : 'cutest_double',
+       description : 'CUTEST library in double precision against which to link')
+
+option('libcutest_quadruple',
+       type : 'string',
+       value : 'cutest_quadruple',
+       description : 'CUTEST library in quadruple precision against which to link')
+
+option('libwsmp',
+       type : 'string',
+       value : 'wsmp',
+       description : 'WSMP library against which to link')
+
+option('libpardiso',
+       type : 'string',
+       value : 'pardiso',
+       description : 'PARDISO library against which to link')
+
+option('libspmf',
+       type : 'string',
+       value : 'spmf',
+       description : 'SPMF library against which to link')
+
+option('libpastixf',
+       type : 'string',
+       value : 'pastixf',
+       description : 'PASTIXF library against which to link')
+
+option('libsmumps',
+       type : 'string',
+       value : 'smumps',
+       description : 'Single-precision MUMPS library against which to link')
+
+option('libdmumps',
+       type : 'string',
+       value : 'dmumps',
+       description : 'Double-precision MUMPS library against which to link')
+
+option('libampl',
+       type : 'string',
+       value : 'ampl',
+       description : 'AMPL library against which to link')
+
+option('libhwloc',
+       type : 'string',
+       value : 'hwloc',
+       description : 'HWLOC library against which to link')
+
+option('libblas_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the BLAS library')
+
+option('liblapack_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the LAPACK library')
+
+option('libhsl_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the HSL library')
+
+option('libcutest_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the CUTEST libraries')
+
+option('libwsmp_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the WSMP library')
+
+option('libpardiso_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the PARDISO library')
+
+option('libspmf_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the SPMF library')
+
+option('libpastixf_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the PASTIXF library')
+
+option('libmumps_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the MUMPS libraries')
+
+option('libampl_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the AMPL library library')
+
+option('libhwloc_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directory to search for the HWLOC library')
+
+option('libhwloc_include',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the HWLOC header files')
+
+option('libhsl_modules',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the HSL modules')
+
+option('libcutest_modules',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the CUTEST modules')
+
+option('int64',
+       type : 'boolean',
+       value : false,
+       description : 'Compile GALAHAD with 64-bit integer')
+
+option('multiprecision',
+       type : 'boolean',
+       value : false,
+       description : 'Compile GALAHAD with -DMULTIPRECISION to have a different suffix for each C routine')

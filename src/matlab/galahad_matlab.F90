@@ -287,8 +287,10 @@
 !  ------------------------------------------------------
 
       mwPointer :: mxCreateStructMatrix
+      INTEGER * 4  :: ninform_i4, i4 = 1
 
-      pr = mxCreateStructMatrix( 1_mws_, 1_mws_, ninform, finform )
+      ninform_i4 = INT( ninform, KIND = KIND( i4 ) )
+      pr = mxCreateStructMatrix( 1_mws_, 1_mws_, ninform_i4, finform )
       CALL mxSetField( struct, 1_mwi_, name, pr )
 
       RETURN
@@ -975,19 +977,8 @@
       mwSize :: nn
       INTEGER * 4 :: Y_array( 1 )
 
-!     CALL mexWarnMsgTxt( ' 4 ' )
-
       nn = 1
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyPtrToInteger8( px, Y_array, nn )
-      CASE ( int2_ )
-        CALL mxCopyPtrToInteger2( px, Y_array, nn )
-      CASE ( int1_ )
-        CALL mxCopyPtrToInteger1( px, Y_array, nn )
-      CASE default
-        CALL mxCopyPtrToInteger4( px, Y_array, nn )
-      END SELECT
+      CALL mxCopyPtrToInteger4( px, Y_array, nn )
       y = Y_array( 1 )
 
       RETURN
@@ -1013,19 +1004,8 @@
       mwSize :: nn
       INTEGER * 8 :: Y_array( 1 )
 
-!     CALL mexWarnMsgTxt( ' 4 ' )
-
       nn = 1
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyPtrToInteger8( px, Y_array, nn )
-      CASE ( int2_ )
-        CALL mxCopyPtrToInteger2( px, Y_array, nn )
-      CASE ( int1_ )
-        CALL mxCopyPtrToInteger1( px, Y_array, nn )
-      CASE default
-        CALL mxCopyPtrToInteger4( px, Y_array, nn )
-      END SELECT
+      CALL mxCopyPtrToInteger8( px, Y_array, nn )
       y = Y_array( 1 )
 
       RETURN
@@ -1033,11 +1013,10 @@
 
 !  -*-*-*-*-*-*- g a l m x  C o p y  P t r  T o  I n t e g e r 4 4 -*-*-*-*-*-
 
-      SUBROUTINE galmxCopyPtrToInteger44( px, Y, n, sparse )
+      SUBROUTINE galmxCopyPtrToInteger44( px, Y, n )
       mwPointer :: px
       INTEGER * 4 :: n
       INTEGER * 4, DIMENSION( n ) :: Y
-      LOGICAL, OPTIONAL :: sparse
 
 !  --------------------------------------------------------------
 
@@ -1055,58 +1034,28 @@
       INTEGER :: alloc_stat
       mwIndex, DIMENSION(:), ALLOCATABLE :: temp_mwi
 
-!     CHARACTER ( len = 80 ) :: debug = REPEAT( ' ', 80 )
-!     CALL mexWarnMsgTxt( ' 44 ' )
-
       nn = n
-      IF ( PRESENT( sparse ) ) THEN
-        SELECT CASE( mwi_ )
-        CASE( kind( Y ) )
-          CALL mxCopyPtrToInteger4( px, Y, nn )
-        CASE default
-          ALLOCATE( temp_mwi( n ), STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
-          SELECT CASE ( mwi_ )
-          CASE ( int8_ )
-            CALL mxCopyPtrToInteger8( px, temp_mwi, nn )
-          CASE ( int2_ )
-            CALL mxCopyPtrToInteger2( px, temp_mwi, nn )
-          CASE ( int1_ )
-            CALL mxCopyPtrToInteger1( px, temp_mwi, nn )
-          CASE default
-            CALL mxCopyPtrToInteger4( px, temp_mwi, nn )
-          END SELECT
-!         Y( : n ) = temp_mwi( : n )
-          Y( : n ) = INT( temp_mwi( : n ), KIND = KIND( Y ) )
-          DEALLOCATE( temp_mwi, STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
-        END SELECT
-      ELSE
-        SELECT CASE ( di_ )
-        CASE ( int8_ )
-          CALL mxCopyPtrToInteger8( px, Y, nn )
-        CASE ( int2_ )
-          CALL mxCopyPtrToInteger2( px, Y, nn )
-        CASE ( int1_ )
-          CALL mxCopyPtrToInteger1( px, Y, nn )
-        CASE default
-!         CALL mexWarnMsgTxt( ' default ' )
-          CALL mxCopyPtrToInteger4( px, Y, nn )
-!         write(debug,*) px, nn
-!         CALL mexErrMsgTxt( TRIM(debug))
-        END SELECT
-      END IF
+      SELECT CASE( mwi_ )
+      CASE( KIND( Y ) )
+        CALL mxCopyPtrToInteger4( px, Y, nn )
+      CASE default
+        ALLOCATE( temp_mwi( n ), STAT = alloc_stat )
+        IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
+        CALL mxCopyPtrToInteger8( px, temp_mwi, nn )
+        Y( : n ) = INT( temp_mwi( : n ), KIND = KIND( Y ) )
+        DEALLOCATE( temp_mwi, STAT = alloc_stat )
+        IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
+      END SELECT
 
       RETURN
       END SUBROUTINE galmxCopyPtrToInteger44
 
 !  -*-*-*-*-*-*- g a l m x  C o p y  P t r  T o  I n t e g e r 8 4 -*-*-*-*-*-
 
-      SUBROUTINE galmxCopyPtrToInteger84( px, Y, n, sparse )
+      SUBROUTINE galmxCopyPtrToInteger84( px, Y, n )
       mwPointer :: px
       INTEGER * 4 :: n
       INTEGER * 8, DIMENSION( n ) :: Y
-      LOGICAL, OPTIONAL :: sparse
 
 !  --------------------------------------------------------------
 
@@ -1121,57 +1070,19 @@
 !  --------------------------------------------------------------
 
       mwSize :: nn
-      INTEGER :: alloc_stat
-      mwIndex, DIMENSION(:), ALLOCATABLE :: temp_mwi
-
-!     CALL mexWarnMsgTxt( ' 84 ' )
 
       nn = n
-
-      IF ( PRESENT( sparse ) ) THEN
-        SELECT CASE( mwi_ )
-        CASE( kind( Y ) )
-            CALL mxCopyPtrToInteger8( px, Y, nn )
-        CASE default
-          ALLOCATE( temp_mwi( n ), STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
-          SELECT CASE ( mwi_ )
-          CASE ( int8_ )
-            CALL mxCopyPtrToInteger8( px, temp_mwi, nn )
-          CASE ( int2_ )
-            CALL mxCopyPtrToInteger2( px, temp_mwi, nn )
-          CASE ( int1_ )
-            CALL mxCopyPtrToInteger1( px, temp_mwi, nn )
-          CASE default
-            CALL mxCopyPtrToInteger4( px, temp_mwi, nn )
-          END SELECT
-          Y( : n ) = temp_mwi( : n )
-          DEALLOCATE( temp_mwi, STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
-        END SELECT
-      ELSE
-        SELECT CASE ( di_ )
-        CASE ( int8_ )
-          CALL mxCopyPtrToInteger8( px, Y, n )
-        CASE ( int2_ )
-          CALL mxCopyPtrToInteger2( px, Y, n )
-        CASE ( int1_ )
-          CALL mxCopyPtrToInteger1( px, Y, n )
-        CASE default
-          CALL mxCopyPtrToInteger4( px, Y, n )
-        END SELECT
-      END IF
+      CALL mxCopyPtrToInteger8( px, Y, nn )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToInteger84
 
 !  -*-*-*-*-*-*- g a l m x  C o p y  P t r  T o  I n t e g e r 4 8 -*-*-*-*-*-
 
-      SUBROUTINE galmxCopyPtrToInteger48( px, Y, n, sparse )
+      SUBROUTINE galmxCopyPtrToInteger48( px, Y, n )
       mwPointer :: px
       INTEGER * 8 :: n
       INTEGER * 4, DIMENSION( n ) :: Y
-      LOGICAL, OPTIONAL :: sparse
 
 !  --------------------------------------------------------------
 
@@ -1191,54 +1102,28 @@
       INTEGER :: alloc_stat
       mwIndex, DIMENSION(:), ALLOCATABLE :: temp_mwi
 
-!     CALL mexWarnMsgTxt( ' 48 ' )
-
       nn = n
-      IF ( PRESENT( sparse ) ) THEN
-        SELECT CASE( mwi_ )
-        CASE( kind( Y ) )
-            CALL mxCopyPtrToInteger4( px, Y, nn )
-        CASE default
-          ALLOCATE( temp_mwi( n ), STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
-          SELECT CASE ( mwi_ )
-          CASE ( int8_ )
-            CALL mxCopyPtrToInteger8( px, temp_mwi, nn )
-          CASE ( int2_ )
-            CALL mxCopyPtrToInteger2( px, temp_mwi, nn )
-          CASE ( int1_ )
-            CALL mxCopyPtrToInteger1( px, temp_mwi, nn )
-          CASE default
-            CALL mxCopyPtrToInteger4( px, temp_mwi, nn )
-          END SELECT
-!         Y( : n ) = temp_mwi( : n )
-          Y( : n ) = INT( temp_mwi( : n ), KIND = KIND( Y ) )
-          DEALLOCATE( temp_mwi, STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
-        END SELECT
-      ELSE
-        SELECT CASE ( di_ )
-        CASE ( int8_ )
-          CALL mxCopyPtrToInteger8( px, Y, nn )
-        CASE ( int2_ )
-          CALL mxCopyPtrToInteger2( px, Y, nn )
-        CASE ( int1_ )
-          CALL mxCopyPtrToInteger1( px, Y, nn )
-        CASE default
-          CALL mxCopyPtrToInteger4( px, Y, nn )
-        END SELECT
-      END IF
+      SELECT CASE( mwi_ )
+      CASE( kind( Y ) )
+       CALL mxCopyPtrToInteger4( px, Y, nn )
+      CASE default
+        ALLOCATE( temp_mwi( n ), STAT = alloc_stat )
+        IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
+        CALL mxCopyPtrToInteger8( px, temp_mwi, nn )
+        Y( : n ) = INT( temp_mwi( : n ), KIND = KIND( Y ) )
+        DEALLOCATE( temp_mwi, STAT = alloc_stat )
+        IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
+      END SELECT
 
       RETURN
       END SUBROUTINE galmxCopyPtrToInteger48
 
 !  -*-*-*-*-*-*- g a l m x  C o p y  P t r  T o  I n t e g e r 8 8 -*-*-*-*-*-
 
-      SUBROUTINE galmxCopyPtrToInteger88( px, Y, n, sparse )
+      SUBROUTINE galmxCopyPtrToInteger88( px, Y, n )
       mwPointer :: px
       INTEGER * 8 :: n
       INTEGER * 8, DIMENSION( n ) :: Y
-      LOGICAL, OPTIONAL :: sparse
 
 !  --------------------------------------------------------------
 
@@ -1253,45 +1138,11 @@
 !  --------------------------------------------------------------
 
       mwSize :: nn
-      INTEGER :: alloc_stat
-      mwIndex, DIMENSION(:), ALLOCATABLE :: temp_mwi
 
 !     CALL mexWarnMsgTxt( ' 88 ' )
 
       nn = n
-      IF ( PRESENT( sparse ) ) THEN
-        SELECT CASE( mwi_ )
-        CASE( kind( Y ) )
-            CALL mxCopyPtrToInteger8( px, Y, nn )
-        CASE default
-          ALLOCATE( temp_mwi( n ), STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
-          SELECT CASE ( mwi_ )
-          CASE ( int8_ )
-            CALL mxCopyPtrToInteger8( px, temp_mwi, nn )
-          CASE ( int2_ )
-            CALL mxCopyPtrToInteger2( px, temp_mwi, nn )
-          CASE ( int1_ )
-            CALL mxCopyPtrToInteger1( px, temp_mwi, nn )
-          CASE default
-            CALL mxCopyPtrToInteger4( px, temp_mwi, nn )
-          END SELECT
-          Y( : n ) = temp_mwi( : n )
-          DEALLOCATE( temp_mwi, STAT = alloc_stat )
-          IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
-        END SELECT
-      ELSE
-        SELECT CASE ( di_ )
-        CASE ( int8_ )
-          CALL mxCopyPtrToInteger8( px, Y, n )
-        CASE ( int2_ )
-          CALL mxCopyPtrToInteger2( px, Y, n )
-        CASE ( int1_ )
-          CALL mxCopyPtrToInteger1( px, Y, n )
-        CASE default
-          CALL mxCopyPtrToInteger4( px, Y, n )
-        END SELECT
-      END IF
+      CALL mxCopyPtrToInteger8( px, Y, n )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToInteger88
@@ -1313,14 +1164,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
+      REAL ( KIND = wp ) :: Y_vect( 1 )
 
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyPtrToReal8( px, Y, 1_mws_ )
-      CASE default
-        CALL mxCopyPtrToReal4( px, Y, 1_mws_ )
-      END SELECT
+      CALL mxCopyPtrToReal8( px, Y_vect, 1_mws_ )
+      Y = Y_vect( 1 )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToReal
@@ -1345,16 +1192,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyPtrToReal8( px, Y, nn )
-      CASE default
-        CALL mxCopyPtrToReal4( px, Y, nn )
-      END SELECT
+      CALL mxCopyPtrToReal8( px, Y, nn )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToRealArray4
@@ -1379,16 +1220,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyPtrToReal8( px, Y, nn )
-      CASE default
-        CALL mxCopyPtrToReal4( px, Y, nn )
-      END SELECT
+      CALL mxCopyPtrToReal8( px, Y, nn )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToRealArray8
@@ -1414,16 +1249,12 @@
 !
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
+      REAL ( KIND = wp ), DIMENSION( m * n ) :: Y_vect
       mwSize :: mn
 
       mn = m * n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyPtrToReal8( px, Y, mn )
-      CASE default
-        CALL mxCopyPtrToReal4( px, Y, mn )
-      END SELECT
+      CALL mxCopyPtrToReal4( px, Y_vect, mn )
+      Y = RESHAPE( Y_vect, (/ m, n /) )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToRealMatrix4
@@ -1448,16 +1279,12 @@
 !
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
+      REAL ( KIND = wp ), DIMENSION( m * n ) :: Y_vect
       mwSize :: mn
 
       mn = m * n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyPtrToReal8( px, Y, mn )
-      CASE default
-        CALL mxCopyPtrToReal4( px, Y, mn )
-      END SELECT
+      CALL mxCopyPtrToReal8( px, Y_vect, mn )
+      Y = RESHAPE( Y_vect, (/ m, n /) )
 
       RETURN
       END SUBROUTINE galmxCopyPtrToRealMatrix8
@@ -1487,16 +1314,10 @@
 !   WRITE( str, "( ' Y = ', I0, ' di = ', I0  )" ) Y, di_
 !   out = mexPrintf( TRIM( str ) // achar(10) )
 
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, 1_mws_ )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, 1_mws_ )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, 1_mws_ )
-      CASE default
-        CALL mxCopyInteger4ToPtr( Y, px, 1_mws_ )
-      END SELECT
+      INTEGER * 4 :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
+
+      CALL mxCopyInteger4ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxCopyInteger4ToPtr
@@ -1514,29 +1335,16 @@
 
 !  Arguments
 
-!  Y   - Integer*4 Fortran scalar
+!  Y   - Integer*8 Fortran scalar
 !  px  - Pointer to ir or jc array
 !  n   - number of elements to copy
 
 !  ---------------------------------------------------------
 
-!   INTEGER ::  mexPrintf
-!   integer*4 out
-!   CHARACTER ( LEN = 200 ) :: str
-!   WRITE( str, "( ' Y = ', I0, ' di = ', I0  )" ) Y, di_
-!   out = mexPrintf( TRIM( str ) // achar(10) )
+      INTEGER * 8 :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
 
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, 1_mws_ )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, 1_mws_ )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, 1_mws_ )
-      CASE default
-!       CALL mxCopyInteger4ToPtr( Y, px, 1_mws_ )
-        CALL mxCopyInteger8ToPtr( Y, px, 1_mws_ )
-      END SELECT
+      CALL mxCopyInteger8ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxCopyInteger8ToPtr
@@ -1564,16 +1372,7 @@
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, nn )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, nn )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, nn )
-      CASE default
-        CALL mxCopyInteger4ToPtr( Y, px, nn )
-      END SELECT
+      CALL mxCopyInteger4ToPtr( Y, px, nn )
 
       RETURN
       END SUBROUTINE galmxCopyInteger44ArrayToPtr
@@ -1601,17 +1400,7 @@
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, nn )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, nn )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, nn )
-      CASE default
-!       CALL mxCopyInteger4ToPtr( Y, px, nn )
-        CALL mxCopyInteger8ToPtr( Y, px, nn )
-      END SELECT
+      CALL mxCopyInteger8ToPtr( Y, px, nn )
 
       RETURN
       END SUBROUTINE galmxCopyInteger48ArrayToPtr
@@ -1639,16 +1428,7 @@
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, nn )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, nn )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, nn )
-      CASE default
-        CALL mxCopyInteger4ToPtr( Y, px, nn )
-      END SELECT
+      CALL mxCopyInteger4ToPtr( Y, px, nn )
 
       RETURN
       END SUBROUTINE galmxCopyInteger84ArrayToPtr
@@ -1676,17 +1456,7 @@
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( di_ )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, nn )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, nn )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, nn )
-      CASE default
-!       CALL mxCopyInteger4ToPtr( Y, px, nn )
-        CALL mxCopyInteger8ToPtr( Y, px, nn )
-      END SELECT
+      CALL mxCopyInteger8ToPtr( Y, px, nn )
 
       RETURN
       END SUBROUTINE galmxCopyInteger88ArrayToPtr
@@ -1709,14 +1479,10 @@
 
 !  -----------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
+      REAL ( KIND = wp ) :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
 
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyReal8ToPtr( Y, px, 1_mws_ )
-      CASE default
-        CALL mxCopyReal4ToPtr( Y, px, 1_mws_ )
-      END SELECT
+      CALL mxCopyReal8ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxCopyRealToPtr
@@ -1741,16 +1507,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyReal8ToPtr( Y, px, nn )
-      CASE default
-        CALL mxCopyReal4ToPtr( Y, px, nn )
-      END SELECT
+      CALL mxCopyReal8ToPtr( Y, px, nn )
 
       RETURN
       END SUBROUTINE galmxCopyRealArray4ToPtr
@@ -1774,16 +1534,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwSize :: nn
 
       nn = n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyReal8ToPtr( Y, px, nn )
-      CASE default
-        CALL mxCopyReal4ToPtr( Y, px, nn )
-      END SELECT
+      CALL mxCopyReal8ToPtr( Y, px, nn )
 
       RETURN
       END SUBROUTINE galmxCopyRealArray8ToPtr
@@ -1809,16 +1563,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwSize :: mn
 
       mn = m * n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyReal8ToPtr( Y, px, mn )
-      CASE default
-        CALL mxCopyReal4ToPtr( Y, px, mn )
-      END SELECT
+      CALL mxCopyReal8ToPtr( RESHAPE( Y, (/ m * n /) ), px, mn )
 
       RETURN
       END SUBROUTINE galmxCopyRealMatrix4ToPtr
@@ -1844,16 +1592,10 @@
 
 !  -----------------------------------------------------------
 
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwSize :: mn
 
       mn = m * n
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyReal8ToPtr( Y, px, mn )
-      CASE default
-        CALL mxCopyReal4ToPtr( Y, px, mn )
-      END SELECT
+      CALL mxCopyReal8ToPtr( RESHAPE( Y, (/m*n/)), px, mn )
 
       RETURN
       END SUBROUTINE galmxCopyRealMatrix8ToPtr
@@ -1876,7 +1618,9 @@
 
 !  -----------------------------------------------------------------
 
-      CALL mxCopyReal4ToPtr( Y, px, 1_mws_ )
+      REAL :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
+      CALL mxCopyReal4ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxCopySingleToPtr
@@ -1927,7 +1671,7 @@
 
 !  ------------------------------------------------------------------------
 
-      CALL mxCopyReal4ToPtr( Y, px, m * n )
+      CALL mxCopyReal4ToPtr( RESHAPE( Y, (/ m * n /) ), px, m * n )
 
       RETURN
       END SUBROUTINE galmxCopySingleMatrixToPtr
@@ -2506,6 +2250,8 @@
 
       mwPointer :: pr, px
       mwPointer :: mxGetPr
+      INTEGER * 4 :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
 
       pr = galmxCreateInteger( )
       CALL mxSetField( struct, 1_mwi_, name, pr )
@@ -2518,7 +2264,7 @@
 !     CASE ( int1_ )
 !       CALL mxCopyInteger1ToPtr( Y, px, 1_mws_ )
 !     CASE default
-        CALL mxCopyInteger4ToPtr( Y, px, 1_mws_ )
+        CALL mxCopyInteger4ToPtr( Y_vect, px, 1_mws_ )
 !     END SELECT
 
       RETURN
@@ -2546,20 +2292,13 @@
 
       mwPointer :: pr, px
       mwPointer :: mxGetPr
+      INTEGER * 8 :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
 
       pr = galmxCreateInteger( )
       CALL mxSetField( struct, 1_mwi_, name, pr )
       px = mxGetPr( pr )
- !    SELECT CASE ( di_ )
- !    CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, 1_mws_ )
- !    CASE ( int2_ )
- !      CALL mxCopyInteger2ToPtr( Y, px, 1_mws_ )
- !    CASE ( int1_ )
- !      CALL mxCopyInteger1ToPtr( Y, px, 1_mws_ )
- !    CASE default
- !      CALL mxCopyInteger4ToPtr( Y, px, 1_mws_ )
- !    END SELECT
+      CALL mxCopyInteger8ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxFillInteger8Component
@@ -2587,20 +2326,13 @@
 
       mwPointer :: pr, px
       mwPointer :: mxGetPr
+      INTEGER ( KIND = long ) :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
 
       pr = galmxCreateLong( )
       CALL mxSetField( struct, 1_mwi_, name, pr )
       px = mxGetPr( pr )
-      SELECT CASE ( long )
-      CASE ( int8_ )
-        CALL mxCopyInteger8ToPtr( Y, px, 1_mws_ )
-      CASE ( int2_ )
-        CALL mxCopyInteger2ToPtr( Y, px, 1_mws_ )
-      CASE ( int1_ )
-        CALL mxCopyInteger1ToPtr( Y, px, 1_mws_ )
-      CASE default
-        CALL mxCopyInteger4ToPtr( Y, px, 1_mws_ )
-      END SELECT
+      CALL mxCopyInteger8ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxFillLongComponent
@@ -2627,18 +2359,14 @@
 !  --------------------------------------------
 
       mwPointer :: pr, px
-      REAL ( KIND = wp ) :: ddig = 1.0_wp
       mwPointer :: mxGetPr
+      REAL ( KIND = wp ) :: Y_vect( 1 )
+      Y_vect( 1 ) = Y
 
       pr = galmxCreateReal( )
       CALL mxSetField( struct, 1_mwi_, name, pr )
       px = mxGetPr( pr )
-      SELECT CASE ( digits( ddig ) )
-      CASE ( 53 )
-        CALL mxCopyReal8ToPtr( Y, px, 1_mws_ )
-      CASE default
-        CALL mxCopyReal4ToPtr( Y, px, 1_mws_ )
-      END SELECT
+      CALL mxCopyReal8ToPtr( Y_vect, px, 1_mws_ )
 
       RETURN
       END SUBROUTINE galmxFillRealComponent

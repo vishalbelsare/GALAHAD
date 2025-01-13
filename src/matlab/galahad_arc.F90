@@ -155,7 +155,7 @@
       mwSize :: status
       mwSize :: m_mwsize, n_mwsize
 
-      CHARACTER ( len = 80 ) :: output_unit, filename
+      CHARACTER ( len = 80 ) :: char_output_unit, filename
 !     CHARACTER ( len = 80 ) :: debug = REPEAT( ' ', 80 )
       CHARACTER ( len = 80 ) :: eval_f = REPEAT( ' ', 80 )
       CHARACTER ( len = 80 ) :: eval_g = REPEAT( ' ', 80 )
@@ -300,8 +300,8 @@
 !  Open i/o units
 
         IF ( control%error > 0 ) THEN
-          WRITE( output_unit, "( I0 )" ) control%error
-          filename = "output_arc." // TRIM( output_unit )
+          WRITE( char_output_unit, "( I0 )" ) control%error
+          filename = "output_arc." // TRIM( char_output_unit )
           OPEN( control%error, FILE = filename, FORM = 'FORMATTED',            &
                 STATUS = 'REPLACE', IOSTAT = iores )
         END IF
@@ -309,8 +309,8 @@
         IF ( control%out > 0 ) THEN
           INQUIRE( control%out, OPENED = opened )
           IF ( .NOT. opened ) THEN
-            WRITE( output_unit, "( I0 )" ) control%out
-            filename = "output_arc." // TRIM( output_unit )
+            WRITE( char_output_unit, "( I0 )" ) control%out
+            filename = "output_arc." // TRIM( char_output_unit )
             OPEN( control%out, FILE = filename, FORM = 'FORMATTED',            &
                   STATUS = 'REPLACE', IOSTAT = iores )
           END IF
@@ -359,8 +359,8 @@
           ALLOCATE( nlp%H%row( nlp%H%ne ), nlp%H%col( nlp%H%ne ),              &
                     STAT = alloc_stat )
           IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )
-          nlp%H%row( : nlp%H%ne ) = INT( IW( : nlp%H%ne ), KIND = int4 ) 
-          nlp%H%col( : nlp%H%ne ) = INT( IW( nlp%H%ne + 1 : ), KIND = int4 ) 
+          nlp%H%row( : nlp%H%ne ) = INT( IW( : nlp%H%ne ), KIND = int4 )
+          nlp%H%col( : nlp%H%ne ) = INT( IW( nlp%H%ne + 1 : ), KIND = int4 )
           IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' deallocation failure ' )
           ALLOCATE( nlp%H%val( nlp%H%ne ), STAT = alloc_stat )
           IF ( alloc_stat /= 0 ) CALL mexErrMsgTxt( ' allocation failure ' )

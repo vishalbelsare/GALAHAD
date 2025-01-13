@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include "psls.h"
+#include "galahad_precision.h"
+#include "galahad_cfunctions.h"
+#include "galahad_psls.h"
 
 int main(void) {
 
@@ -14,25 +16,25 @@ int main(void) {
     struct psls_inform_type inform;
 
     // Set problem data
-    int n = 5; // dimension of A
-    int ne = 7; // number of elements of A
-    int dense_ne = n * ( n + 1 ) / 2; // number of elements of dense A
+    ipc_ n = 5; // dimension of A
+    ipc_ ne = 7; // number of elements of A
+    ipc_ dense_ne = n * ( n + 1 ) / 2; // number of elements of dense A
 
-    int row[] = {1, 2, 2, 3, 3, 4, 5}; // A indices & values, NB lower triangle
-    int col[] = {1, 1, 5, 2, 3, 3, 5};
-    int ptr[] = {1, 2, 4, 6, 7, 8}; 
-    double val[] = {2.0, 3.0, 6.0, 4.0, 1.0, 5.0, 1.0};
-    double dense[] = {2.0, 3.0, 0.0, 0.0, 4.0, 1.0, 0.0,
+    ipc_ row[] = {1, 2, 2, 3, 3, 4, 5}; // A indices & values, NB lower triangle
+    ipc_ col[] = {1, 1, 5, 2, 3, 3, 5};
+    ipc_ ptr[] = {1, 2, 4, 6, 7, 8};
+    rpc_ val[] = {2.0, 3.0, 6.0, 4.0, 1.0, 5.0, 1.0};
+    rpc_ dense[] = {2.0, 3.0, 0.0, 0.0, 4.0, 1.0, 0.0,
                       0.0, 5.0, 0.0, 0.0, 6.0, 0.0, 0.0, 1.0};
-    char st;
-    int status;
-    int status_apply;
+    char st = ' ';
+    ipc_ status;
+    ipc_ status_apply;
 
     printf(" Fortran sparse matrix indexing\n\n");
 
     printf(" basic tests of storage formats\n\n");
 
-    for( int d=1; d <= 3; d++){
+    for( ipc_ d=1; d <= 3; d++){
 
         // Initialize PSLS
         psls_initialize( &data, &control, &status );
@@ -50,7 +52,7 @@ int main(void) {
                              "coordinate", ne, row, col, NULL );
                 psls_form_preconditioner( &data, &status, ne, val );
                 break;
-            printf(" case %1i break\n",d);
+            printf(" case %1" i_ipc_ " break\n",d);
             case 2: // sparse by rows
                 st = 'R';
                 psls_import( &control, &data, &status, n,
@@ -66,7 +68,7 @@ int main(void) {
             }
 
         // Set right-hand side b in x
-        double x[] = {8.0, 45.0, 31.0, 15.0, 17.0};   // values
+        rpc_ x[] = {8.0, 45.0, 31.0, 15.0, 17.0};   // values
 
         if(status == 0){
           psls_information( &data, &inform, &status );
@@ -75,11 +77,11 @@ int main(void) {
           status_apply = - 1;
         }
 
-        printf("%c storage: status from form & factorize = %i apply = %i\n",
-                   st, status, status_apply );
+        printf("%c storage: status from form & factorize = %" i_ipc_ 
+               " apply = %" i_ipc_ "\n", st, status, status_apply );
 
         //printf("x: ");
-        //for( int i = 0; i < n; i++) printf("%f ", x[i]);
+        //for( ipc_ i = 0; i < n; i++) printf("%f ", x[i]);
 
         // Delete internal workspace
         psls_terminate( &data, &control, &inform );

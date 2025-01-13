@@ -3,34 +3,42 @@
 
 #include <stdio.h>
 #include <math.h>
-#include "dgo.h"
+#include <string.h>
+#include "galahad_precision.h"
+#include "galahad_cfunctions.h"
+#include "galahad_dgo.h"
+#ifdef REAL_128
+#include <quadmath.h>
+#endif
 
 // Custom userdata struct
 struct userdata_type {
-   double p;
-   double freq;
-   double mag;
+   rpc_ p;
+   rpc_ freq;
+   rpc_ mag;
 };
 
 // Function prototypes
-int fun( int n, const double x[], double *f, const void * );
-int grad( int n, const double x[], double g[], const void * );
-int hess( int n, int ne, const double x[], double hval[], const void * );
-int hess_dense( int n, int ne, const double x[], double hval[], const void * );
-int hessprod( int n, const double x[], double u[], const double v[],
+ipc_ fun( ipc_ n, const rpc_ x[], rpc_ *f, const void * );
+ipc_ grad( ipc_ n, const rpc_ x[], rpc_ g[], const void * );
+ipc_ hess( ipc_ n, ipc_ ne, const rpc_ x[], rpc_ hval[], const void * );
+ipc_ hess_dense( ipc_ n, ipc_ ne, const rpc_ x[], rpc_ hval[], 
+                 const void * );
+ipc_ hessprod( ipc_ n, const rpc_ x[], rpc_ u[], const rpc_ v[],
               bool got_h, const void * );
-int shessprod( int n, const double x[], int nnz_v, const int index_nz_v[],
-               const double v[], int *nnz_u, int index_nz_u[], double u[],
+ipc_ shessprod( ipc_ n, const rpc_ x[], ipc_ nnz_v, const ipc_ index_nz_v[],
+               const rpc_ v[], ipc_ *nnz_u, ipc_ index_nz_u[], rpc_ u[],
                bool got_h, const void * );
-int prec(int n, const double x[], double u[], const double v[], const void * );
-int fun_diag(int n, const double x[], double *f, const void * );
-int grad_diag(int n, const double x[], double g[], const void * );
-int hess_diag(int n, int ne, const double x[], double hval[], const void * );
-int hessprod_diag( int n, const double x[], double u[], const double v[],
-                   bool got_h, const void * );
-int shessprod_diag( int n, const double x[], int nnz_v, const int index_nz_v[],
-                    const double v[], int *nnz_u, int index_nz_u[],
-                    double u[], bool got_h, const void * );
+ipc_ prec(ipc_ n, const rpc_ x[], rpc_ u[], const rpc_ v[], 
+          const void * );
+ipc_ fun_diag(ipc_ n, const rpc_ x[], rpc_ *f, const void * );
+ipc_ grad_diag(ipc_ n, const rpc_ x[], rpc_ g[], const void * );
+ipc_ hess_diag(ipc_ n, ipc_ ne, const rpc_ x[], rpc_ hval[], const void * );
+ipc_ hessprod_diag( ipc_ n, const rpc_ x[], rpc_ u[], 
+                    const rpc_ v[], bool got_h, const void * );
+ipc_ shessprod_diag( ipc_ n, const rpc_ x[], ipc_ nnz_v, const ipc_ index_nz_v[],
+                    const rpc_ v[], ipc_ *nnz_u, ipc_ index_nz_u[],
+                    rpc_ u[], bool got_h, const void * );
 
 int main(void) {
 
@@ -46,27 +54,30 @@ int main(void) {
     userdata.mag = 1000;
 
     // Set problem data
-    int n = 3; // dimension
-    int ne = 5; // Hesssian elements
-    double x_l[] = {-10,-10,-10};
-    double x_u[] = {0.5,0.5,0.5};
-    int H_row[] = {0, 1, 2, 2, 2}; // Hessian H
-    int H_col[] = {0, 1, 0, 1, 2}; // NB lower triangle
-    int H_ptr[] = {0, 1, 2, 5};    // row pointers
+    ipc_ n = 3; // dimension
+    ipc_ ne = 5; // Hesssian elements
+    rpc_ x_l[] = {-10,-10,-10};
+    rpc_ x_u[] = {0.5,0.5,0.5};
+    ipc_ H_row[] = {0, 1, 2, 2, 2}; // Hessian H
+    ipc_ H_col[] = {0, 1, 0, 1, 2}; // NB lower triangle
+    ipc_ H_ptr[] = {0, 1, 2, 5};    // row pointers
 
     // Set storage
-    double g[n]; // gradient
-    char st;
-    int status;
+    rpc_ g[n]; // gradient
+    char st = ' ';
+    ipc_ status;
 
     printf(" C sparse matrix indexing\n\n");
 
     printf(" tests options for all-in-one storage format\n\n");
 
-    for(int d=1; d <= 5; d++){
+    for(ipc_ d=1; d <= 5; d++){
 
         // Initialize DGO
         dgo_initialize( &data, &control, &status );
+        strcpy(control.trb_control.trs_control.symmetric_linear_solver,"sytr ");
+        strcpy(control.trb_control.trs_control.definite_linear_solver,"potr ");
+        strcpy(control.trb_control.psls_control.definite_linear_solver,"potr ");
 
         // Set user-defined control options
         control.f_indexing = false; // C sparse matrix indexing
@@ -75,7 +86,7 @@ int main(void) {
         //control.print_level = 1;
 
         // Start from 0
-        double x[] = {0,0,0};
+        rpc_ x[] = {0,0,0};
 
         switch(d){
             case 1: // sparse co-ordinate storage
@@ -120,19 +131,32 @@ int main(void) {
         dgo_information( &data, &inform, &status );
 
         if(inform.status == 0){
-            printf("%c:%6i evaluations. Optimal objective value = %5.2f"
-              " status = %1i\n", st, inform.f_eval, inform.obj, inform.status);
-        }else if(inform.status == -18){
-            printf("%c:%6i evaluations. Best objective value = %5.2f"
-              " status = %1i\n", st, inform.f_eval, inform.obj, inform.status);
+#ifdef REAL_128
+// interim replacement for quad output: $GALAHAD/include/galahad_pquad_of.h
+#include "galahad_pquad_of.h"
+#else
+            printf("%c:%6" i_ipc_ " evaluations. Optimal objective "
+                   "value = %.2f status = %1" i_ipc_ "\n", 
+                   st, inform.f_eval, inform.obj, inform.status);
+#endif
+        }else if(inform.status == -99){
+#ifdef REAL_128
+// interim replacement for quad output: $GALAHAD/include/galahad_pquad_bf.h
+#include "galahad_pquad_bf.h"
+#else
+            printf("%c:%6" i_ipc_ " evaluations. Best objective "
+                   "value = %.2f status = %1" i_ipc_ "\n", 
+                   st, inform.f_eval, inform.obj, inform.status);
+#endif
         }else{
-            printf("%c: DGO_solve exit status = %1i\n", st, inform.status);
+            printf("%c: DGO_solve exit status = %1" i_ipc_ "\n", 
+                   st, inform.status);
         }
         //printf("x: ");
-        //for(int i = 0; i < n; i++) printf("%f ", x[i]);
+        //for(ipc_ i = 0; i < n; i++) printf("%f ", x[i]);
         //printf("\n");
         //printf("gradient: ");
-        //for(int i = 0; i < n; i++) printf("%f ", g[i]);
+        //for(ipc_ i = 0; i < n; i++) printf("%f ", g[i]);
         //printf("\n");
 
         // Delete internal workspace
@@ -142,16 +166,19 @@ int main(void) {
     printf("\n tests reverse-communication options\n\n");
 
     // reverse-communication input/output
-    int eval_status, nnz_u, nnz_v;
-    double f = 0.0;
-    double u[n], v[n];
-    int index_nz_u[n], index_nz_v[n];
-    double H_val[ne], H_dense[n*(n+1)/2], H_diag[n];
+    ipc_ eval_status, nnz_u, nnz_v;
+    rpc_ f = 0.0;
+    rpc_ u[n], v[n];
+    ipc_ index_nz_u[n], index_nz_v[n];
+    rpc_ H_val[ne], H_dense[n*(n+1)/2], H_diag[n];
 
-    for(int d=1; d <= 5; d++){
+    for(ipc_ d=1; d <= 5; d++){
 
         // Initialize DGO
         dgo_initialize( &data, &control, &status );
+        strcpy(control.trb_control.trs_control.symmetric_linear_solver,"sytr ");
+        strcpy(control.trb_control.trs_control.definite_linear_solver,"potr ");
+        strcpy(control.trb_control.psls_control.definite_linear_solver,"potr ");
 
         // Set user-defined control options
         control.f_indexing = false; // C sparse matrix indexing
@@ -160,7 +187,7 @@ int main(void) {
         //control.print_level = 1;
 
         // Start from 0
-        double x[] = {0,0,0};
+        rpc_ x[] = {0,0,0};
         switch(d){
             case 1: // sparse co-ordinate storage
                 st = 'C';
@@ -197,7 +224,7 @@ int main(void) {
                         eval_status = grad( n, x, g, &userdata );
                         eval_status = hessprod( n, x, u, v, false, &userdata );
                     }else{
-                        printf(" the value %1i of status should not occur\n",
+                        printf(" the value %1" i_ipc_ " of status should not occur\n",
                                status );
                         break;
                     }
@@ -238,7 +265,7 @@ int main(void) {
                         eval_status = grad( n, x, g, &userdata );
                         eval_status = hessprod( n, x, u, v, false, &userdata );
                     }else{
-                        printf(" the value %1i of status should not occur\n",
+                        printf(" the value %1" i_ipc_ " of status should not occur\n",
                                status);
                         break;
                     }
@@ -281,7 +308,7 @@ int main(void) {
                         eval_status = grad( n, x, g, &userdata );
                         eval_status = hessprod( n, x, u, v, false, &userdata );
                     }else{
-                        printf(" the value %1i of status should not occur\n",
+                        printf(" the value %1" i_ipc_ " of status should not occur\n",
                                status);
                         break;
                     }
@@ -326,7 +353,7 @@ int main(void) {
                         eval_status = hessprod_diag( n, x, u, v, false,
                                                      &userdata );
                     }else{
-                        printf(" the value %1i of status should not occur\n",
+                        printf(" the value %1" i_ipc_ " of status should not occur\n",
                                status);
                         break;
                     }
@@ -371,7 +398,7 @@ int main(void) {
                         eval_status = grad( n, x, g, &userdata );
                         eval_status = hessprod( n, x, u, v, false, &userdata );
                     }else{
-                        printf(" the value %1i of status should not occur\n",
+                        printf(" the value %1" i_ipc_ " of status should not occur\n",
                                status);
                         break;
                     }
@@ -383,19 +410,32 @@ int main(void) {
         dgo_information( &data, &inform, &status );
 
         if(inform.status == 0){
-            printf("%c:%6i evaluations. Optimal objective value = %5.2f"
-              " status = %1i\n", st, inform.f_eval, inform.obj, inform.status);
-        }else if(inform.status == -18){
-            printf("%c:%6i evaluations. Best objective value = %5.2f"
-              " status = %1i\n", st, inform.f_eval, inform.obj, inform.status);
+#ifdef REAL_128
+// interim replacement for quad output: $GALAHAD/include/galahad_pquad_of.h
+#include "galahad_pquad_of.h"
+#else
+            printf("%c:%6" i_ipc_ " evaluations. Optimal objective "
+                   "value = %.2f status = %1" i_ipc_ "\n", 
+                   st, inform.f_eval, inform.obj, inform.status);
+#endif
+        }else if(inform.status == -99){
+#ifdef REAL_128
+// interim replacement for quad output: $GALAHAD/include/galahad_pquad_bf.h
+#include "galahad_pquad_bf.h"
+#else
+            printf("%c:%6" i_ipc_ " evaluations. Best objective "
+                   "value = %.2f status = %1" i_ipc_ "\n", 
+                   st, inform.f_eval, inform.obj, inform.status);
+#endif
         }else{
-            printf("%c: DGO_solve exit status = %1i\n", st, inform.status);
+            printf("%c: DGO_solve exit status = %1" i_ipc_ "\n", 
+                   st, inform.status);
         }
         //printf("x: ");
-        //for(int i = 0; i < n; i++) printf("%f ", x[i]);
+        //for(ipc_ i = 0; i < n; i++) printf("%f ", x[i]);
         //printf("\n");
         //printf("gradient: ");
-        //for(int i = 0; i < n; i++) printf("%f ", g[i]);
+        //for(ipc_ i = 0; i < n; i++) printf("%f ", g[i]);
         //printf("\n");
 
         // Delete internal workspace
@@ -405,14 +445,14 @@ int main(void) {
 }
 
 // Objective function
-int fun( int n,
-         const double x[],
-         double *f,
+ipc_ fun( ipc_ n,
+         const rpc_ x[],
+         rpc_ *f,
          const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double p = myuserdata->p;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ p = myuserdata->p;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     *f = pow(x[0] + x[2] + p, 2) + pow(x[1] + x[2], 2) + mag * cos(freq*x[0])
          + x[0] + x[1] + x[2];
@@ -420,14 +460,14 @@ int fun( int n,
 }
 
 // Gradient of the objective
-int grad( int n,
-          const double x[],
-          double g[],
+ipc_ grad( ipc_ n,
+          const rpc_ x[],
+          rpc_ g[],
           const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double p = myuserdata->p;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ p = myuserdata->p;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     g[0] = 2.0 * ( x[0] + x[2] + p ) - mag * freq * sin(freq*x[0]) + 1;
     g[1] = 2.0 * ( x[1] + x[2] ) + 1;
@@ -436,14 +476,14 @@ int grad( int n,
 }
 
 // Hessian of the objective
-int hess( int n,
-          int ne,
-          const double x[],
-          double hval[],
+ipc_ hess( ipc_ n,
+          ipc_ ne,
+          const rpc_ x[],
+          rpc_ hval[],
           const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     hval[0] = 2.0 - mag * freq * freq * cos(freq*x[0]);
     hval[1] = 2.0;
@@ -454,14 +494,14 @@ int hess( int n,
 }
 
 // Dense Hessian
-int hess_dense( int n,
-                int ne,
-                const double x[],
-                double hval[],
+ipc_ hess_dense( ipc_ n,
+                ipc_ ne,
+                const rpc_ x[],
+                rpc_ hval[],
                 const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     hval[0] = 2.0 - mag * freq * freq * cos(freq*x[0]);
     hval[1] = 0.0;
@@ -473,15 +513,15 @@ int hess_dense( int n,
 }
 
 // Hessian-vector product
-int hessprod( int n,
-              const double x[],
-              double u[],
-              const double v[],
+ipc_ hessprod( ipc_ n,
+              const rpc_ x[],
+              rpc_ u[],
+              const rpc_ v[],
               bool got_h,
               const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     u[0] = u[0] + 2.0 * ( v[0] + v[2] )
            - mag * freq * freq * cos(freq*x[0]) * v[0];
@@ -491,24 +531,24 @@ int hessprod( int n,
 }
 
 // Sparse Hessian-vector product
-int shessprod( int n,
-               const double x[],
-               int nnz_v,
-               const int index_nz_v[],
-               const double v[],
-               int *nnz_u,
-               int index_nz_u[],
-               double u[],
+ipc_ shessprod( ipc_ n,
+               const rpc_ x[],
+               ipc_ nnz_v,
+               const ipc_ index_nz_v[],
+               const rpc_ v[],
+               ipc_ *nnz_u,
+               ipc_ index_nz_u[],
+               rpc_ u[],
                bool got_h,
                const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
-    double p[] = {0., 0., 0.};
+    rpc_ p[] = {0., 0., 0.};
     bool used[] = {false, false, false};
-    for(int i = 0; i < nnz_v; i++){
-        int j = index_nz_v[i];
+    for(ipc_ i = 0; i < nnz_v; i++){
+        ipc_ j = index_nz_v[i];
         switch(j){
             case 0:
                 p[0] = p[0] + 2.0 * v[0]
@@ -534,7 +574,7 @@ int shessprod( int n,
         }
     }
     *nnz_u = 0;
-    for(int j = 0; j < 3; j++){
+    for(ipc_ j = 0; j < 3; j++){
         if(used[j]){
         u[j] = p[j];
         *nnz_u = *nnz_u + 1;
@@ -545,10 +585,10 @@ int shessprod( int n,
 }
 
 // Apply preconditioner
-int prec( int n,
-          const double x[],
-          double u[],
-          const double v[],
+ipc_ prec( ipc_ n,
+          const rpc_ x[],
+          rpc_ u[],
+          const rpc_ v[],
           const void *userdata ){
    u[0] = 0.5 * v[0];
    u[1] = 0.5 * v[1];
@@ -557,14 +597,14 @@ int prec( int n,
 }
 
 // Objective function
-int fun_diag( int n,
-              const double x[],
-              double *f,
+ipc_ fun_diag( ipc_ n,
+              const rpc_ x[],
+              rpc_ *f,
               const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double p = myuserdata->p;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ p = myuserdata->p;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     *f = pow(x[2] + p, 2) + pow(x[1], 2) + mag * cos(freq*x[0])
          + x[0] + x[1] + x[2];
@@ -572,14 +612,14 @@ int fun_diag( int n,
 }
 
 // Gradient of the objective
-int grad_diag( int n,
-               const double x[],
-               double g[],
+ipc_ grad_diag( ipc_ n,
+               const rpc_ x[],
+               rpc_ g[],
                const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double p = myuserdata->p;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ p = myuserdata->p;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     g[0] = -mag * freq * sin(freq*x[0]) + 1;
     g[1] = 2.0 * x[1] + 1;
@@ -588,14 +628,14 @@ int grad_diag( int n,
 }
 
 // Hessian of the objective
-int hess_diag( int n,
-               int ne,
-               const double x[],
-               double hval[],
+ipc_ hess_diag( ipc_ n,
+               ipc_ ne,
+               const rpc_ x[],
+               rpc_ hval[],
                const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     hval[0] = -mag * freq * freq * cos(freq*x[0]);
     hval[1] = 2.0;
@@ -604,15 +644,15 @@ int hess_diag( int n,
 }
 
 // Hessian-vector product
-int hessprod_diag( int n,
-                   const double x[],
-                   double u[],
-                   const double v[],
+ipc_ hessprod_diag( ipc_ n,
+                   const rpc_ x[],
+                   rpc_ u[],
+                   const rpc_ v[],
                    bool got_h,
                    const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
     u[0] = u[0] + -mag * freq * freq * cos(freq*x[0]) * v[0];
     u[1] = u[1] + 2.0 * v[1];
@@ -621,24 +661,24 @@ int hessprod_diag( int n,
 }
 
 // Sparse Hessian-vector product
-int shessprod_diag( int n,
-                    const double x[],
-                    int nnz_v,
-                    const int index_nz_v[],
-                    const double v[],
-                    int *nnz_u,
-                    int index_nz_u[],
-                    double u[],
+ipc_ shessprod_diag( ipc_ n,
+                    const rpc_ x[],
+                    ipc_ nnz_v,
+                    const ipc_ index_nz_v[],
+                    const rpc_ v[],
+                    ipc_ *nnz_u,
+                    ipc_ index_nz_u[],
+                    rpc_ u[],
                     bool got_h,
                     const void *userdata ){
     struct userdata_type *myuserdata = (struct userdata_type *) userdata;
-    double freq = myuserdata->freq;
-    double mag = myuserdata->mag;
+    rpc_ freq = myuserdata->freq;
+    rpc_ mag = myuserdata->mag;
 
-    double p[] = {0., 0., 0.};
+    rpc_ p[] = {0., 0., 0.};
     bool used[] = {false, false, false};
-    for(int i = 0; i < nnz_v; i++){
-        int j = index_nz_v[i];
+    for(ipc_ i = 0; i < nnz_v; i++){
+        ipc_ j = index_nz_v[i];
         switch(j){
             case 0:
                 p[0] = p[0] - mag * freq * freq * cos(freq*x[0]) * v[0];
@@ -655,7 +695,7 @@ int shessprod_diag( int n,
         }
     }
     *nnz_u = 0;
-    for(int j = 0; j < 3; j++){
+    for(ipc_ j = 0; j < 3; j++){
         if(used[j]){
         u[j] = p[j];
         *nnz_u = *nnz_u + 1;

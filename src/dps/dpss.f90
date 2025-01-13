@@ -1,5 +1,5 @@
    PROGRAM GALAHAD_DPS_EXAMPLE   !  GALAHAD 3.0 - 23/03/2018 AT 07:30 GMT.
-   USE GALAHAD_DPS_DOUBLE                       ! double precision version
+   USE GALAHAD_DPS_double                       ! double precision version
    IMPLICIT NONE
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )    ! set precision
    INTEGER, PARAMETER :: n = 10                 ! problem dimension
@@ -21,6 +21,7 @@
    H%row( n ) = n ; H%col( n ) = n ; H%val( n ) = -2.0_wp
    C = 1.0_wp ; f = 0.0_wp ; delta = 1.0_wp
    CALL DPS_initialize( data, control, inform )  ! initialize control parameters
+!  control%symmetric_linear_solver = "ma27 "
    CALL DPS_solve( n, H, C, f, X, data, control, inform, delta = delta )
    WRITE( 6, "( / A, ES12.4, A, / ( 5ES12.4 ) )" )                             &
              ' optimal f =', inform%obj, ', optimal x = ', X

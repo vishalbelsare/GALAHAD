@@ -1,261 +1,394 @@
 #  standard GALAHAD package compilation
 
 #  Nick Gould, for GALAHAD production
-#  This version: 2021-06-28
+#  This version: 2023-11-13
 
 #  package compilation
 
-$(package).o: $(LG)($(package).o)
+$(package).o: $(LG)($(package)_$(PRECIS).o)
 
-$(LG)($(package).o): ../$(package)/$(package).f90
+$(LG)($(package)_$(PRECIS).o): ../$(package)/$(package).F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)   "
-	$(SED) -f $(SEDS) ../$(package)/$(package).f90 > $(OBJ)/$(package)1.f90
-	$(SED) -f $(LSEDS) $(OBJ)/$(package)1.f90 > $(OBJ)/$(package)2.f90
-	$(SED) -f $(LPSEDS) $(OBJ)/$(package)2.f90 > $(OBJ)/$(package)3.f90
-	$(SED) "s/^.$(NOT95)/     /" \
-                $(OBJ)/$(package)3.f90 > $(OBJ)/$(package).f90
-	cd $(OBJ); $(FORTRAN) -o $(package).o $(FFLAGSS) $(package).f90 \
+	$(CP) ../$(package)/$(package).F90 $(OBJ)/$(package).F90
+#	cd $(OBJ); $(FORTRAN) $(FFLAGSOMP) -E -dD $(package).F90
+	cd $(OBJ); $(FORTRAN) -o $(package)_$(PRECIS).o \
+                     $(FFLAGSOMP) $(package).F90 \
                 || ( printf ' %-26s' "=> Disabling optimization " ; \
-                   $(FORTRAN) -o $(package).o $(FFLAGSN) $(package).f90 )
-#	cd $(OBJ); $(ARR) $(package).o
-	cd $(OBJ); $(ARR) $(package).o ; \
-                    $(RM) $(package).f90 $(package)1.f90 $(package)2.f90 \
-                          $(package)3.f90 $(package).o
+                   $(FORTRAN) -o $(package)_$(PRECIS).o \
+                     $(FFLAGSOMPN) $(package).F90 )
+	cd $(OBJ); $(ARR) $(package)_$(PRECIS).o ; \
+           $(RM) $(package).F90 $(package)_$(PRECIS).o
 	$(RMARFILES) $(DEPENDS)
-	$(RMARFILE) use$(package).o
-	$(RMOBFILE) in$(package).o
+	$(CURMARFILE) use$(package)_$(PRECIS).o
+	$(RMOBFILE) in$(package)_$(PRECIS).o
 	$(RMOBFILE) $(package)s.o
 	$(RMOBFILE) $(package)s2.o
 	$(RMOBFILE) $(package)s3.o
-	$(RMOBFILE) $(package)t.o
-	$(RMOBFILE) $(package)ti.o
-	$(CRMARFILE) $(package)_ciface.o
+	$(RMOBFILE) $(package)t_$(PRECIS).o
+	$(RMOBFILE) $(package)ti_$(PRECIS).o
+	$(CRMARFILE) $(package)_ciface_$(PRECIS).o
 	$(MVMODS)
 	@printf '[ OK ]\n'
 
 #  package C interface compilation
 
-$(package)_ciface.o: $(LG)($(package).o) $(CLG)($(package)_ciface.o)
+$(package)_ciface.o: $(LG)($(package)_$(PRECIS).o) \
+                       $(CLG)($(package)_ciface_$(PRECIS).o)
 
-$(CLG)($(package)_ciface.o): ../$(package)/C/$(package)_ciface.f90
+$(CLG)($(package)_ciface_$(PRECIS).o): ../$(package)/C/$(package)_ciface.F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)_ciface"
-	$(SED) -f $(CISEDS) ../$(package)/C/$(package)_ciface.f90 \
-           > $(OBJ)/$(package)_ciface.f90
-	cd $(OBJ); $(FORTRAN) -o $(package)_ciface.o $(FFLAGSS) \
-           $(package)_ciface.f90 \
+	$(CP) ../$(package)/C/$(package)_ciface.F90 $(OBJ)/$(package)_ciface.F90
+	cd $(OBJ); $(FORTRAN) -o $(package)_ciface_$(PRECIS).o $(FFLAGSS) \
+               $(package)_ciface.F90 \
             || ( printf ' %-26s' "=> Disabling optimization " ; \
-           $(FORTRAN) -o $(package)_ciface.o $(FFLAGSN) $(package)_ciface.f90 )
-	cd $(OBJ); $(CARR) $(package)_ciface.o
-	cd $(OBJ); $(RM) $(package)_ciface.f90 $(package)_ciface.o
+             $(FORTRAN) -o $(package)_ciface_$(PRECIS).o $(FFLAGSN) \
+               $(package)_ciface.F90 )
+	cd $(OBJ); $(CARR) $(package)_ciface_$(PRECIS).o
+	cd $(OBJ); $(RM) $(package)_ciface.F90 $(package)_ciface_$(PRECIS).o
 	$(CRMARFILES) $(CDEPENDS)
-	$(RMOBFILE) $(package)ct.o
-	$(RMOBFILE) $(package)ctf.o
+	$(RMOBFILE) $(package)ct_$(PRECIS).o
+	$(RMOBFILE) $(package)ctf_$(PRECIS).o
+	$(PYRMARFILE) $(package)_pyiface.o
 	$(MVMODS)
+	@printf '[ OK ]\n'
+
+#  package python interface compilation
+
+$(package)_pyiface.o: $(LG)($(package)_$(PRECIS).o) \
+                        $(CLG)($(package)_ciface_$(PRECIS).o) \
+                        $(PYLG)($(package)_pyiface.o)
+
+$(PYLG)($(package)_pyiface.o): ../$(package)/Python/$(package)_pyiface.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)_pyiface"
+	$(CP) ../$(package)/Python/$(package)_pyiface.c \
+           $(OBJ)/$(package)_pyiface.c
+#	$(SED) -f $(CISEDS) ../$(package)/Python/$(package)_pyiface.c \
+#          > $(OBJ)/$(package)_pyiface.c
+	cd $(OBJ); $(CC) -o $(package)_pyiface.o $(CFLAGS) \
+           $(package)_pyiface.c $(PYINCLUDES) \
+            || ( printf ' %-26s' "=> Disabling optimization " ; \
+           $(CC) -o $(package)_pyiface.o $(CFLAGSN) $(package)_pyiface.c \
+            $(PYINCLUDES) )
+	cd $(OBJ); $(PYARR) $(package)_pyiface.o
+	cd $(OBJ); $(RM) $(package)_pyiface.c
+	$(PYRMARFILES) $(PYDEPENDS)
+	cd $(OBJ); CC=$(CC) FORTRAN=$(FORTRAN) OPTIMIZATION=$(OPTIMIZATION) \
+                   SHARED=$(SHARED) DLEXT=$(DLEXT) LOADALL=$(LOADALL) \
+                   LOADNONE=$(LOADNONE) \
+                   $(BINSHELL) $(GALAHAD)/bin/create_shared
+#	export ARCH=$(VERSION) ; pip install $(GALAHAD)/bin/
+	$(MKDIR) -p  $(PYSITEPACKDIR)/galahad
+	cd $(OBJ) ; $(CC) $(SHARED) $(OPTIMIZATION) -pthread \
+          -Wl,-O1  -Wl,-Bsymbolic-functions $(OBJ)/$(package)_pyiface.o \
+          -L$(OBJ)/shared -lgalahad_py -lgalahad_c -lhsl_c \
+          -lgalahad -lgalahad_cutest_dummy $(HSL) $(SPRAL) $(MKL_PARDISO) \
+          $(PARDISO) $(WSMP) $(PASTIX) $(MUMPS) $(MPI) $(UMFPACK) $(METIS) \
+          $(LAPACK) $(BLAS) -lgfortran \
+          -o $(PYSITEPACKDIR)/galahad/$(package).$(SOABI).$(DLEXT) \
+          -Wl,-rpath=$(OBJ)/shared $(MOMP)
+	cd $(OBJ); $(RM) $(package)_pyiface.o
 	@printf '[ OK ]\n'
 
 #  package coverage compilation
 
-$(package)_gcov: ../$(package)/$(package).f90
+$(package)_gcov: ../$(package)/$(package).F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)   "
-	$(SED) -f $(SEDS) ../$(package)/$(package).f90 > $(package)1.f90
-	$(SED) -f $(LSEDS) $(package)1.f90 > $(package)2.f90
-	$(SED) -f $(LPSEDS) $(package)2.f90 > $(package)3.f90
-	$(SED) "s/^.$(NOT95)/     /" $(package)3.f90 > $(package)_cov.f90
-	$(RM) ./$(package)1.f90 ./$(package)2.f90 ./$(package)3.f90
+	$(CP) ../$(package)/$(package).F90 $(package).F90
 	$(FORTRAN) -o $(package)_cov.o $(FFLAGSS) $(COVERAGE) \
-            $(package)_cov.f90 \
+            $(package)_cov.F90 \
           || ( printf ' %-26s' "=> Disabling optimization " ; \
             $(FORTRAN) -o $(package)_cov.o $(FFLAGSN) $(COVERAGE) \
-              $(package)_cov.f90 )
-	$(SED) -f $(SEDS) $(package)t.f90 > $(package)t_cov1.f90
-	$(SED) -f $(LSEDS) $(package)t_gcov1.f90 > $(package)t_cov.f90
-	$(RM) ./$(package)t_cov1.f90
+              $(package)_cov.F90 )
+	$(CP) $(package)t.F90 $(package)t_cov.F90
 	$(FORTRAN) -g $(BASIC) $(NOOPTIMIZATION) $(MODULES) $(COVERAGE) \
-          $(package)t_cov.f90
+          $(package)t_cov.F90
 	$(FORTRAN) $(NOOPTIMIZATION) $(MODULES) $(COVERAGE) \
           -o ./$(package)_cov $(package)_cov.o $(package)t_cov.o \
            -L$(OBJ) $(LIBS)
 	./$(package)_gcov
 	gcov ./$(package)_gcov
-	$(MV) ./$(package)_cov.f90.cov ./$(package)_coverage
+	$(MV) ./$(package)_cov.F90.cov ./$(package)_coverage
 	$(RM) ./$(package)*cov* ./galahad_$(package)_*.mod
 
 #  test programs for specification document
 
-$(package)s.o: $(OBJ)/$(package)s.o
+$(package)e.o: $(OBJ)/$(package)e_$(PRECIS).o
 
-$(OBJ)/$(package)s.o: ../$(package)/$(package)s.f90
+$(OBJ)/$(package)e_$(PRECIS).o: ../$(package)/$(package)e.f90
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)e  "
+	$(SED) -f $(SEDS) \
+            ../$(package)/$(package)e.f90 > $(OBJ)/$(package)s1.f90
+	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)e.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)e_$(PRECIS).o \
+                      $(FFLAGS) $(package)e.f90
+	rm $(OBJ)/*.f90
+	@printf '[ OK ]\n'
+
+$(package)s.o: $(OBJ)/$(package)s_$(PRECIS).o
+
+$(OBJ)/$(package)s_$(PRECIS).o: ../$(package)/$(package)s.f90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s  "
 	$(SED) -f $(SEDS) \
            ../$(package)/$(package)s.f90 > $(OBJ)/$(package)s1.f90
 	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s.f90
-	cd $(OBJ) ; $(FORTRAN) -o $(package)s.o $(FFLAGS) $(package)s.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s_$(PRECIS).o \
+                      $(FFLAGS) $(package)s.f90
 	rm $(OBJ)/*.f90
 	@printf '[ OK ]\n'
 
-$(package)s2.o: $(OBJ)/$(package)s2.o
+$(package)s2.o: $(OBJ)/$(package)s2_$(PRECIS).o
 
-$(OBJ)/$(package)s2.o: ../$(package)/$(package)s2.f90
+$(OBJ)/$(package)s2_$(PRECIS).o: ../$(package)/$(package)s2.f90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s2  "
 	$(SED) -f $(SEDS) \
            ../$(package)/$(package)s2.f90 > $(OBJ)/$(package)s1.f90
 	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s2.f90
-	cd $(OBJ) ; $(FORTRAN) -o $(package)s2.o $(FFLAGS) $(package)s2.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s2_$(PRECIS).o \
+                      $(FFLAGS) $(package)s2.f90
 	rm $(OBJ)/*.f90
 	@printf '[ OK ]\n'
 
-$(package)s3.o: $(OBJ)/$(package)s3.o
+$(package)s3.o: $(OBJ)/$(package)s3_$(PRECIS).o
 
-$(OBJ)/$(package)s3.o: ../$(package)/$(package)s3.f90
+$(OBJ)/$(package)s3_$(PRECIS).o: ../$(package)/$(package)s3.f90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s3  "
 	$(SED) -f $(SEDS) \
             ../$(package)/$(package)s3.f90 > $(OBJ)/$(package)s1.f90
 	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s3.f90
-	cd $(OBJ) ; $(FORTRAN) -o $(package)s3.o $(FFLAGS) $(package)s3.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s3_$(PRECIS).o \
+                      $(FFLAGS) $(package)s3.f90
 	rm $(OBJ)/*.f90
 	@printf '[ OK ]\n'
 
-$(package)s4.o: $(OBJ)/$(package)s4.o
+$(package)s4.o: $(OBJ)/$(package)s4_$(PRECIS).o
 
-$(OBJ)/$(package)s4.o: ../$(package)/$(package)s4.f90
+$(OBJ)/$(package)s4_$(PRECIS).o: ../$(package)/$(package)s4.f90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s4  "
 	$(SED) -f $(SEDS) \
             ../$(package)/$(package)s4.f90 > $(OBJ)/$(package)s1.f90
 	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s4.f90
-	cd $(OBJ) ; $(FORTRAN) -o $(package)s4.o $(FFLAGS) $(package)s4.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s4_$(PRECIS).o \
+                      $(FFLAGS) $(package)s4.f90
+	rm $(OBJ)/*.f90
+	@printf '[ OK ]\n'
+
+$(package)s5.o: $(OBJ)/$(package)s5_$(PRECIS).o
+
+$(OBJ)/$(package)s5_$(PRECIS).o: ../$(package)/$(package)s5.f90
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s5  "
+	$(SED) -f $(SEDS) \
+            ../$(package)/$(package)s5.f90 > $(OBJ)/$(package)s1.f90
+	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s5.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s5_$(PRECIS).o \
+                      $(FFLAGS) $(package)s5.f90
+	rm $(OBJ)/*.f90
+	@printf '[ OK ]\n'
+
+$(package)s6.o: $(OBJ)/$(package)s6_$(PRECIS).o
+
+$(OBJ)/$(package)s6_$(PRECIS).o: ../$(package)/$(package)s6.f90
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s6  "
+	$(SED) -f $(SEDS) \
+            ../$(package)/$(package)s6.f90 > $(OBJ)/$(package)s1.f90
+	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s6.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s6_$(PRECIS).o \
+                      $(FFLAGS) $(package)s6.f90
+	rm $(OBJ)/*.f90
+	@printf '[ OK ]\n'
+
+$(package)s7.o: $(OBJ)/$(package)s7_$(PRECIS).o
+
+$(OBJ)/$(package)s7_$(PRECIS).o: ../$(package)/$(package)s7.f90
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)s7  "
+	$(SED) -f $(SEDS) \
+            ../$(package)/$(package)s7.f90 > $(OBJ)/$(package)s1.f90
+	$(SED) -f $(LSEDS) $(OBJ)/$(package)s1.f90 > $(OBJ)/$(package)s7.f90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)s7_$(PRECIS).o \
+                      $(FFLAGS) $(package)s7.f90
 	rm $(OBJ)/*.f90
 	@printf '[ OK ]\n'
 
 #  test programs for C specification document
 
-$(package)cs.o: $(OBJ)/$(package)cs.o
+$(package)cs.o: $(OBJ)/$(package)cs_$(PRECIS).o
 
-$(OBJ)/$(package)cs.o: ../$(package)/C/$(package)s.c
+$(OBJ)/$(package)cs_$(PRECIS).o: ../$(package)/C/$(package)s.c
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs  "
 	$(SED) -f $(CSEDS) \
            ../$(package)/C/$(package)s.c > $(OBJ)/$(package)cs.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)cs.o $(CFLAGS) $(package)cs.c \
-                     -I $(GALAHAD)/include -I $(OBJ)
+	cd $(OBJ) ; $(CC) -o $(package)cs_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs.c -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
-$(package)cs2.o: $(OBJ)/$(package)cs2.o
+$(package)cs2.o: $(OBJ)/$(package)cs2_$(PRECIS).o
 
-$(OBJ)/$(package)cs2.o: ../$(package)/C/$(package)s2.c
+$(OBJ)/$(package)cs2_$(PRECIS).o: ../$(package)/C/$(package)s2.c
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs2  "
 	$(SED) -f $(CSEDS) \
            ../$(package)/C/$(package)s2.c > $(OBJ)/$(package)cs2.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)cs2.o $(CFLAGS) $(package)cs2.c \
-                     -I $(GALAHAD)/include -I $(OBJ)
+	cd $(OBJ) ; $(CC) -o $(package)cs2_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs2.c -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
-$(package)cs3.o: $(OBJ)/$(package)cs3.o
+$(package)cs3.o: $(OBJ)/$(package)cs3_$(PRECIS).o
 
-$(OBJ)/$(package)cs3.o: ../$(package)/C/$(package)s3.c
+$(OBJ)/$(package)cs3_$(PRECIS).o: ../$(package)/C/$(package)s3.c
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs3  "
 	$(SED) -f $(CSEDS) \
            ../$(package)/C/$(package)s3.c > $(OBJ)/$(package)cs3.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)cs3.o $(CFLAGS) $(package)cs3.c \
+	cd $(OBJ) ; $(CC) -o $(package)cs3_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs3.c -I $(GALAHAD)/include -I $(OBJ)
+	rm $(OBJ)/*.c
+	@printf '[ OK ]\n'
+
+$(package)cs4.o: $(OBJ)/$(package)cs4_$(PRECIS).o
+
+$(OBJ)/$(package)cs4_$(PRECIS).o: ../$(package)/C/$(package)s4.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs4  "
+	$(SED) -f $(CSEDS) \
+           ../$(package)/C/$(package)s4.c > $(OBJ)/$(package)cs4.c
+	cd $(OBJ) ; $(CC) -o $(package)cs4_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs4.c -I $(GALAHAD)/include -I $(OBJ)
+	rm $(OBJ)/*.c
+	@printf '[ OK ]\n'
+
+$(package)cs5.o: $(OBJ)/$(package)cs5_$(PRECIS).o
+
+$(OBJ)/$(package)cs5_$(PRECIS).o: ../$(package)/C/$(package)s5.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs5  "
+	$(SED) -f $(CSEDS) \
+           ../$(package)/C/$(package)s5.c > $(OBJ)/$(package)cs5.c
+	cd $(OBJ) ; $(CC) -o $(package)cs5_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs5.c \
                      -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
-$(package)cs4.o: $(OBJ)/$(package)cs4.o
+$(package)cs6.o: $(OBJ)/$(package)cs6_$(PRECIS).o
 
-$(OBJ)/$(package)cs4.o: ../$(package)/C/$(package)s4.c
-	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs4  "
+$(OBJ)/$(package)cs6_$(PRECIS).o: ../$(package)/C/$(package)s6.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs6  "
 	$(SED) -f $(CSEDS) \
-           ../$(package)/C/$(package)s4.c > $(OBJ)/$(package)cs4.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)cs4.o $(CFLAGS) $(package)cs4.c \
+           ../$(package)/C/$(package)s6.c > $(OBJ)/$(package)cs6.c
+	cd $(OBJ) ; $(CC) -o $(package)cs6_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs6.c \
+                     -I $(GALAHAD)/include -I $(OBJ)
+	rm $(OBJ)/*.c
+	@printf '[ OK ]\n'
+
+$(package)cs7.o: $(OBJ)/$(package)cs7_$(PRECIS).o
+
+$(OBJ)/$(package)cs7_$(PRECIS).o: ../$(package)/C/$(package)s7.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cs7  "
+	$(SED) -f $(CSEDS) \
+           ../$(package)/C/$(package)s7.c > $(OBJ)/$(package)cs7.c
+	cd $(OBJ) ; $(CC) -o $(package)cs7_$(PRECIS).o \
+                      $(CFLAGS) $(package)cs7.c \
                      -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
 #  comprehensive test programs
 
-$(package)t.o: $(OBJ)/$(package)t.o
+$(package)t.o: $(OBJ)/$(package)t_$(PRECIS).o
 
-$(OBJ)/$(package)t.o: ../$(package)/$(package)t.f90
+$(OBJ)/$(package)t_$(PRECIS).o: ../$(package)/$(package)t.F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)t  "
-	$(SED) -f $(SEDS) \
-           ../$(package)/$(package)t.f90 > $(OBJ)/$(package)t1.f90
-	$(SED) -f $(LSEDS) $(OBJ)/$(package)t1.f90 > $(OBJ)/$(package)t.f90
-	cd $(OBJ) ; $(FORTRAN) -o $(package)t.o $(FFLAGSS) $(package)t.f90
-	rm $(OBJ)/*.f90
+	$(CP) ../$(package)/$(package)t.F90 $(OBJ)/$(package)t.F90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)t_$(PRECIS).o \
+                      $(FFLAGSS) $(package)t.F90
+	rm $(OBJ)/*.F90
 	@printf '[ OK ]\n'
 
-$(package)ti.o: $(OBJ)/$(package)ti.o
+$(package)t2.o: $(OBJ)/$(package)t2_$(PRECIS).o
 
-$(OBJ)/$(package)ti.o: ../$(package)/$(package)ti.f90
+$(OBJ)/$(package)t2_$(PRECIS).o: ../$(package)/$(package)t2.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)t2"
+	$(CP) ../$(package)/$(package)t2.F90 $(OBJ)/$(package)t2.F90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)t2_$(PRECIS).o \
+                      $(FFLAGSS) $(package)t2.F90
+	rm $(OBJ)/*.F90
+	@printf '[ OK ]\n'
+
+$(package)ti.o: $(OBJ)/$(package)ti_$(PRECIS).o
+
+$(OBJ)/$(package)ti_$(PRECIS).o: ../$(package)/$(package)ti.F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)ti  "
-	$(SED) -f $(SEDS) \
-           ../$(package)/$(package)ti.f90 > $(OBJ)/$(package)t1.f90
-	$(SED) -f $(LSEDS) $(OBJ)/$(package)t1.f90 > $(OBJ)/$(package)ti.f90
-	cd $(OBJ) ; $(FORTRAN) -o $(package)ti.o $(FFLAGSS) $(package)ti.f90
-	rm $(OBJ)/*.f90
+	$(CP) ../$(package)/$(package)ti.F90 $(OBJ)/$(package)ti.F90
+	cd $(OBJ) ; $(FORTRAN) -o $(package)ti_$(PRECIS).o \
+                      $(FFLAGSS) $(package)ti.F90
+	rm $(OBJ)/*.F90
 	@printf '[ OK ]\n'
 
 #  comprehensive test programs for C interfaces
 
-$(package)ct.o: $(OBJ)/$(package)ct.o
+$(package)ct.o: $(OBJ)/$(package)ct_$(PRECIS).o
 
-$(OBJ)/$(package)ct.o: ../$(package)/C/$(package)t.c
+$(OBJ)/$(package)ct_$(PRECIS).o: ../$(package)/C/$(package)t.c
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)ct  "
-	$(SED) -f $(CSEDS) \
-           ../$(package)/C/$(package)t.c > $(OBJ)/$(package)ct.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)ct.o $(CFLAGS) $(package)ct.c \
-                     -I $(GALAHAD)/include -I $(OBJ)
+	$(CP) ../$(package)/C/$(package)t.c $(OBJ)/$(package)ct.c
+	cd $(OBJ) ; $(CC) -o $(package)ct_$(PRECIS).o $(CFLAGS) \
+                      $(package)ct.c -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
-$(package)cti.o: $(OBJ)/$(package)cti.o
+$(package)ct2.o: $(OBJ)/$(package)ct2_$(PRECIS).o
 
-$(OBJ)/$(package)cti.o: ../$(package)/C/$(package)ti.c
+$(OBJ)/$(package)ct2_$(PRECIS).o: ../$(package)/C/$(package)t2.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)ct2 "
+	$(CP) ../$(package)/C/$(package)t2.c $(OBJ)/$(package)ct2.c
+	cd $(OBJ) ; $(CC) -o $(package)ct2_$(PRECIS).o $(CFLAGS) \
+                      $(package)ct2.c -I $(GALAHAD)/include -I $(OBJ)
+	rm $(OBJ)/*.c
+	@printf '[ OK ]\n'
+
+$(package)ct3.o: $(OBJ)/$(package)ct3_$(PRECIS).o
+
+$(OBJ)/$(package)ct3_$(PRECIS).o: ../$(package)/C/$(package)t2.c
+	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)ct3 "
+	$(CP) ../$(package)/C/$(package)t2.c $(OBJ)/$(package)ct3.c
+	cd $(OBJ) ; $(CC) -o $(package)ct3_$(PRECIS).o $(CFLAGS) \
+                      $(package)ct3.c -I $(GALAHAD)/include -I $(OBJ)
+	rm $(OBJ)/*.c
+	@printf '[ OK ]\n'
+
+$(package)cti.o: $(OBJ)/$(package)cti_$(PRECIS).o
+
+$(OBJ)/$(package)cti_$(PRECIS).o: ../$(package)/C/$(package)ti.c
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)cti  "
-	$(SED) -f $(CSEDS) \
-           ../$(package)/C/$(package)ti.c > $(OBJ)/$(package)cti.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)cti.o $(CFLAGS) $(package)cti.c \
-                     -I $(GALAHAD)/include -I $(OBJ)
+	$(CP) ../$(package)/C/$(package)ti.c $(OBJ)/$(package)cti.c
+	cd $(OBJ) ; $(CC) -o $(package)cti_$(PRECIS).o $(CFLAGS) \
+                      $(package)cti.c -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
-$(package)ctf.o: $(OBJ)/$(package)ctf.o
+$(package)ctf.o: $(OBJ)/$(package)ctf_$(PRECIS).o
 
-$(OBJ)/$(package)ctf.o: ../$(package)/C/$(package)tf.c
+$(OBJ)/$(package)ctf_$(PRECIS).o: ../$(package)/C/$(package)tf.c
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)ctf  "
-	$(SED) -f $(CSEDS) \
-           ../$(package)/C/$(package)tf.c > $(OBJ)/$(package)ctf.c
-	$(CP) $(GALAHAD)/include/galahad_$(PRECIS).h $(OBJ)/galahad_precision.h
-	cd $(OBJ) ; $(CC) -o $(package)ctf.o $(CFLAGS) $(package)ctf.c \
-                     -I $(GALAHAD)/include -I $(OBJ)
+	$(CP) ../$(package)/C/$(package)tf.c $(OBJ)/$(package)ctf.c
+	cd $(OBJ) ; $(CC) -o $(package)ctf_$(PRECIS).o $(CFLAGS) \
+                      $(package)ctf.c -I $(GALAHAD)/include -I $(OBJ)
 	rm $(OBJ)/*.c
 	@printf '[ OK ]\n'
 
 #  CUTEst/AMPL interfaces
 
-use$(package).o: $(LG)(use$(package).o)
+use$(package).o: $(CULG)(use$(package)_$(PRECIS).o)
 
-$(LG)(use$(package).o): ../$(package)/use$(package).f90
+$(CULG)(use$(package)_$(PRECIS).o): ../$(package)/use$(package).F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "use$(package)   "
-	$(SED) -f $(SEDS) \
-           ../$(package)/use$(package).f90 > $(OBJ)/use$(package)1.f90
-	$(SED) -f $(LSEDS) $(OBJ)/use$(package)1.f90 > $(OBJ)/use$(package)2.f90
-	$(SED) "s/^.$(NOT95)/     /" \
-          $(OBJ)/use$(package)2.f90 > $(OBJ)/use$(package).f90
+	$(CP) ../$(package)/use$(package).F90 $(OBJ)/use$(package).F90
 	cd $(OBJ); \
-          $(FORTRAN) -o use$(package).o $(FFLAGSOMP) use$(package).f90 \
+          $(FORTRAN) -o use$(package)_$(PRECIS).o \
+                     $(FFLAGSOMP) -I $(CUTEST)/include use$(package).F90 \
                 || ( printf ' %-26s' "=> Disabling optimization " ; \
-                   $(FORTRAN) -o use$(package).o $(FFLAGSN) use$(package).f90 )
-	cd $(OBJ); $(ARR) use$(package).o ; \
-                   $(RM) use$(package).f90 use$(package)1.f90 \
-                                       use$(package)2.f90 use$(package).o
-	$(RMOBFILE) run$(package)_sif.o
+                   $(FORTRAN) -o use$(package)_$(PRECIS).o \
+                      $(FFLAGSN)  -I $(CUTEST)/include use$(package).F90 )
+	cd $(OBJ); $(CUARR) use$(package)_$(PRECIS).o ; \
+                   $(RM) use$(package).F90 use$(package)_$(PRECIS).o
+	$(RMOBFILE) run$(package)_sif_$(PRECIS).o
 	$(MVMODS)
 	@printf '[ OK ]\n'

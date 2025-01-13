@@ -1,6 +1,6 @@
 #include <fintrf.h>
 
-!  THIS VERSION: GALAHAD 3.1 - 09/08/2018 AT 14:20 GMT.
+!  THIS VERSION: GALAHAD 4.2 - 2023-12-21 AT 11:20 GMT.
 
 !-*-*-*-  G A L A H A D _ L P B _ M A T L A B _ T Y P E S   M O D U L E  -*-*-
 
@@ -57,7 +57,7 @@
         mwPointer :: pointer
         mwPointer :: status, alloc_status, bad_alloc, iter, factorization_status
         mwPointer :: factorization_integer, factorization_real, nfacts, nbacts
-        mwPointer :: obj, primal_infeasibility, dual_infeasibility
+        mwPointer :: threads, obj, primal_infeasibility, dual_infeasibility
         mwPointer :: complementary_slackness, potential, non_negligible_pivot
         mwPointer :: feasible
         TYPE ( LPB_time_pointer_type ) :: time_pointer
@@ -185,9 +185,9 @@
         CASE( 'identical_bounds_tol' )
           CALL MATLAB_get_value( ps, 'identical_bounds_tol',                   &
                                  pc, LPB_control%identical_bounds_tol )
-        CASE( 'mu_lunge' )
-          CALL MATLAB_get_value( ps, 'mu_lunge',                               &
-                                 pc, LPB_control%mu_lunge )
+        CASE( 'mu_pounce' )
+          CALL MATLAB_get_value( ps, 'mu_pounce',                              &
+                                 pc, LPB_control%mu_pounce )
         CASE( 'indicator_tol_p' )
           CALL MATLAB_get_value( ps, 'indicator_tol_p',                        &
                                  pc, LPB_control%indicator_tol_p )
@@ -297,7 +297,7 @@
          'gamma_c                        ', 'gamma_f                        ', &
          'reduce_infeas                  ', 'obj_unbounded                  ', &
          'potential_unbounded            ', 'identical_bounds_tol           ', &
-         'mu_lunge                       ', 'indicator_tol_p                ', &
+         'mu_pounce                      ', 'indicator_tol_p                ', &
          'indicator_tol_pd               ', 'indicator_tol_tapia            ', &
          'cpu_time_limit                 ', 'clock_time_limit               ', &
          'remove_dependencies            ',                                    &
@@ -378,8 +378,8 @@
                                   LPB_control%potential_unbounded )
       CALL MATLAB_fill_component( pointer, 'identical_bounds_tol',             &
                                   LPB_control%identical_bounds_tol )
-      CALL MATLAB_fill_component( pointer, 'mu_lunge',                         &
-                                  LPB_control%mu_lunge )
+      CALL MATLAB_fill_component( pointer, 'mu_pounce',                        &
+                                  LPB_control%mu_pounce )
       CALL MATLAB_fill_component( pointer, 'indicator_tol_p',                  &
                                   LPB_control%indicator_tol_p )
       CALL MATLAB_fill_component( pointer, 'indicator_tol_pd',                 &
@@ -454,18 +454,18 @@
 
       mwPointer :: mxCreateStructMatrix
 
-      INTEGER * 4, PARAMETER :: ninform = 19
+      INTEGER * 4, PARAMETER :: ninform = 20
       CHARACTER ( LEN = 24 ), PARAMETER :: finform( ninform ) = (/             &
            'status                  ', 'alloc_status            ',             &
            'bad_alloc               ', 'iter                    ',             &
            'factorization_status    ', 'factorization_integer   ',             &
            'factorization_real      ', 'nfacts                  ',             &
-           'nbacts                  ', 'obj                     ',             &
-           'primal_infeasibility    ', 'dual_infeasibility      ',             &
-           'complementary_slackness ', 'potential               ',             &
-           'non_negligible_pivot    ', 'feasible                ',             &
-           'time                    ', 'FDC_inform              ',             &
-           'SBLS_inform             '   /)
+           'nbacts                  ', 'threads                 ',             &
+           'obj                     ', 'primal_infeasibility    ',             &
+           'dual_infeasibility      ', 'complementary_slackness ',             &
+           'potential               ', 'non_negligible_pivot    ',             &
+           'feasible                ', 'time                    ',             &
+           'FDC_inform              ', 'SBLS_inform             '   /)
       INTEGER * 4, PARAMETER :: t_ninform = 12
       CHARACTER ( LEN = 21 ), PARAMETER :: t_finform( t_ninform ) = (/         &
            'total                ', 'preprocess           ',                   &
@@ -505,6 +505,8 @@
         'nfacts', LPB_pointer%nfacts )
       CALL MATLAB_create_integer_component( LPB_pointer%pointer,               &
         'nbacts', LPB_pointer%nbacts )
+      CALL MATLAB_create_real_component( LPB_pointer%pointer,                  &
+        'threads', LPB_pointer%threads )
       CALL MATLAB_create_real_component( LPB_pointer%pointer,                  &
         'obj', LPB_pointer%obj )
       CALL MATLAB_create_real_component( LPB_pointer%pointer,                  &
@@ -605,6 +607,8 @@
                                mxGetPr( LPB_pointer%nfacts ) )
       CALL MATLAB_copy_to_ptr( LPB_inform%nbacts,                              &
                                mxGetPr( LPB_pointer%nbacts ) )
+      CALL MATLAB_copy_to_ptr( LPB_inform%threads,                             &
+                               mxGetPr( LPB_pointer%threads ) )
       CALL MATLAB_copy_to_ptr( LPB_inform%obj,                                 &
                                mxGetPr( LPB_pointer%obj ) )
       CALL MATLAB_copy_to_ptr( LPB_inform%primal_infeasibility,                &

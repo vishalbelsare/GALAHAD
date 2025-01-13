@@ -1,0 +1,229 @@
+.TH "galahad_lhs.h" 3 "Thu Jun 22 2023" "C interfaces to GALAHAD LHS" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+galahad_lhs.h
+.SH SYNOPSIS
+.br
+.PP
+\fC#include <stdbool\&.h>\fP
+.br
+\fC#include <stdint\&.h>\fP
+.br
+\fC#include 'galahad_precision\&.h'\fP
+.br
+\fC#include 'galahad_cfunctions\&.h'\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBlhs_control_type\fP"
+.br
+.ti -1c
+.RI "struct \fBlhs_inform_type\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBlhs_initialize\fP (void **data, struct \fBlhs_control_type\fP *control, struct \fBlhs_inform_type\fP *inform)"
+.br
+.ti -1c
+.RI "void \fBlhs_read_specfile\fP (struct \fBlhs_control_type\fP *control, const char specfile[])"
+.br
+.ti -1c
+.RI "void \fBlhs_ihs\fP (int n_dimen, int n_points, int *seed, int **X, const struct \fBlhs_control_type\fP *control, struct \fBlhs_inform_type\fP *inform, void **data)"
+.br
+.ti -1c
+.RI "void \fBlhs_get_seed\fP (int *seed)"
+.br
+.ti -1c
+.RI "void \fBlhs_information\fP (void **data, struct \fBlhs_inform_type\fP *inform, int *status)"
+.br
+.ti -1c
+.RI "void \fBlhs_terminate\fP (void **data, struct \fBlhs_control_type\fP *control, struct \fBlhs_inform_type\fP *inform)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SH "Introduction"
+.PP
+.SS "Purpose"
+This package \fBcomputes an array of Latin Hypercube samples\&.\fP\&.
+.PP
+Currently, only the control and inform parameters are exposed; these are provided and used by other GALAHAD packages with C interfaces\&.
+.SS "Authors"
+J\&. Burkardt, University of Pittsburgh (LGPL) adapted for GALAHAD by N\&. I\&. M\&. Gould, STFC-Rutherford Appleton Laboratory, England\&.
+.PP
+C interface, additionally J\&. Fowkes, STFC-Rutherford Appleton Laboratory\&.
+.PP
+Julia interface, additionally A\&. Montoison and D\&. Orban, Polytechnique Montréal\&.
+.SS "Originally released"
+June 2016, C interface March 2022\&. 
+.SH "Data Structure Documentation"
+.PP 
+.SH "struct lhs_control_type"
+.PP 
+\fBData Fields:\fP
+.RS 4
+int \fIerror\fP error and warning diagnostics occur on stream error\&. 
+.br
+.PP
+int \fIout\fP general output occurs on stream out\&. 
+.br
+.PP
+int \fIprint_level\fP the level of output required\&. Possible values are: 
+.PD 0
+
+.IP "\(bu" 2
+< 1 no output\&. 
+.IP "\(bu" 2
+> 0 debugging\&. 
+.PP
+
+.br
+.PP
+int \fIduplication\fP the duplication factor\&. This must be at least 1, a value of 5 is reasonable\&. 
+.br
+.PP
+bool \fIspace_critical\fP if \&.space_critical true, every effort will be made to use as little space as possible\&. This may result in longer computation time\&. 
+.br
+.PP
+bool \fIdeallocate_error_fatal\fP if \&.deallocate_error_fatal is true, any array/pointer deallocation error will terminate execution\&. Otherwise, computation will continue\&. 
+.br
+.PP
+char \fIprefix[31]\fP all output lines will be prefixed by \&.prefix(2:LEN(TRIM(prefix))-1) where \&.prefix contains the required string enclosed in quotes, e\&.g\&. 'string' or 'string' 
+.br
+.PP
+.RE
+.PP
+.SH "struct lhs_inform_type"
+.PP 
+\fBData Fields:\fP
+.RS 4
+int \fIstatus\fP return status\&. Possible values are: 
+.PD 0
+
+.IP "\(bu" 2
+0 the call was successful\&. 
+.IP "\(bu" 2
+-1\&. An allocation error occurred\&. A message indicating the offending array is written on unit control\&.error, and the returned allocation status and a string containing the name of the offending array are held in inform\&.alloc_status and inform\&.bad_alloc respectively\&. 
+.IP "\(bu" 2
+-2\&. A deallocation error occurred\&. A message indicating the offending array is written on unit control\&.error and the returned allocation status and a string containing the name of the offending array are held in inform\&.alloc_status and inform\&.bad_alloc respectively\&. 
+.IP "\(bu" 2
+-3\&. The random number seed has not been set\&. 
+.PP
+
+.br
+.PP
+int \fIalloc_status\fP the status of the last attempted allocation/deallocation\&. 
+.br
+.PP
+char \fIbad_alloc[81]\fP the name of the array for which an allocation/deallocation error occurred\&. 
+.br
+.PP
+.RE
+.PP
+.SH "Function Documentation"
+.PP 
+.SS "void lhs_initialize (void ** data, struct \fBlhs_control_type\fP * control, struct \fBlhs_inform_type\fP * inform)"
+Set default control values and initialize private data
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIcontrol\fP is a struct containing control information (see fit_control_type)
+.br
+\fIinform\fP is a struct containing output information (see fit_inform_type) 
+.RE
+.PP
+
+.SS "void lhs_read_specfile (struct \fBlhs_control_type\fP * control, const char specfile[])"
+Read the content of a specification file, and perform the assignment of values associated with given keywords to the corresponding control parameters\&.
+.PP
+By default, the spcification file will be named RUNLHS\&.SPC and lie in the current directory\&. Refer to Table 2\&.1 in the fortran documentation provided in $GALAHAD/doc/lhs\&.pdf for a list of keywords that may be set\&.
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontrol\fP a struct containing control information (see above) 
+.br
+\fIspecfile\fP a character string containing the name of the specfile 
+.RE
+.PP
+
+.SS "void lhs_ihs (int n_dimen, int n_points, int * seed, int ** X, const struct \fBlhs_control_type\fP * control, struct \fBlhs_inform_type\fP * inform, void ** data)"
+The improved distributed hyper-cube sampling algorithm\&.
+.PP
+Discussion:
+.PP
+n_points points in an n_dimen dimensional Latin hyper-cube are to be selected\&. Each of the coordinate dimensions is discretized to the values 1 through n\&. The points are to be chosen in such a way that no two points have any coordinate value in common\&. This is a standard Latin hypercube requirement, and there are many solutions\&.
+.PP
+This algorithm differs in that it tries to pick a solution which has the property that the points are 'spread out' as evenly as possible\&. It does this by determining an optimal even spacing, and using the DUPLICATION factor to allow it to choose the best of the various options available to it\&.
+.PP
+Reference:
+.PP
+Brian Beachkofski, Ramana Grandhi, Improved Distributed Hypercube Sampling, American Institute of Aeronautics and Astronautics Paper 2002-1274
+.PP
+\fBParameters\fP
+.RS 4
+\fIn_dimen\fP is a scalar variable of type int that specifies the spatial dimension
+.br
+\fIn_points\fP is a scalar variable of type int that specifies the number of points to be generated
+.br
+\fIseed\fP is a scalar variable of type int, that gives a seed for the random number generator used
+.br
+\fIX\fP is an array variable of type int with dimensions [n_dimen][n_points] that gives the hyper-cube points
+.br
+\fIcontrol,inform,data\fP - see lhs_initialize
+.RE
+.PP
+.PP
+ 
+.SS "void lhs_get_seed (int * seed)"
+Get a seed for the random number generator\&.
+.PP
+\fBParameters\fP
+.RS 4
+\fIseed\fP is a scalar variable of type int that gives the pseudorandom seed value\&. 
+.RE
+.PP
+
+.SS "void lhs_information (void ** data, struct \fBlhs_inform_type\fP * inform, int * status)"
+Provides output information
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIinform\fP is a struct containing output information (see \fBlhs_inform_type\fP)
+.br
+\fIstatus\fP is a scalar variable of type int, that gives the exit status from the package\&. Possible values are (currently): 
+.PD 0
+
+.IP "\(bu" 2
+0\&. The values were recorded succesfully 
+.PP
+.RE
+.PP
+
+.SS "void lhs_terminate (void ** data, struct \fBlhs_control_type\fP * control, struct \fBlhs_inform_type\fP * inform)"
+Deallocate all internal private storage
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIcontrol\fP is a struct containing control information (see \fBlhs_control_type\fP)
+.br
+\fIinform\fP is a struct containing output information (see \fBlhs_inform_type\fP) 
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for C interfaces to GALAHAD LHS from the source code\&.

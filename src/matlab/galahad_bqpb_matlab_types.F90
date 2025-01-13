@@ -1,8 +1,8 @@
 #include <fintrf.h>
 
-!  THIS VERSION: GALAHAD 2.4 - 04/03/2011 AT 18:00 GMT.
+!  THIS VERSION: GALAHAD 4.2 - 2023-12-21 AT 10:30 GMT.
 
-!-*-*-*-  G A L A H A D _  B Q P B _ M A T L A B _ T Y P E S   M O D U L E  -*-*-
+!-*-*-  G A L A H A D _  B Q P B _ M A T L A B _ T Y P E S   M O D U L E  -*-*-
 
 !  Copyright reserved, Gould/Orban/Toint, for GALAHAD productions
 !  Principal author: Nick Gould
@@ -188,9 +188,9 @@
         CASE( 'identical_bounds_tol' )
           CALL MATLAB_get_value( ps, 'identical_bounds_tol',                   &
                                  pc, BQPB_control%identical_bounds_tol )
-        CASE( 'mu_lunge' )
-          CALL MATLAB_get_value( ps, 'mu_lunge',                               &
-                                 pc, BQPB_control%mu_lunge )
+        CASE( 'mu_pounce' )
+          CALL MATLAB_get_value( ps, 'mu_pounce',                              &
+                                 pc, BQPB_control%mu_pounce )
         CASE( 'indicator_tol_p' )
           CALL MATLAB_get_value( ps, 'indicator_tol_p',                        &
                                  pc, BQPB_control%indicator_tol_p )
@@ -230,6 +230,9 @@
         CASE( 'balance_initial_complentarity' )
           CALL MATLAB_get_value( ps, 'balance_initial_complentarity',          &
                                  pc, BQPB_control%balance_initial_complentarity)
+        CASE( 'crossover' )
+          CALL MATLAB_get_value( ps, 'crossover',                              &
+                                 pc, BQPB_control%crossover )
         CASE( 'space_critical' )
           CALL MATLAB_get_value( ps, 'space_critical',                         &
                                  pc, BQPB_control%space_critical )
@@ -283,7 +286,7 @@
       mwPointer :: mxCreateStructMatrix
       mwPointer :: pointer
 
-      INTEGER * 4, PARAMETER :: ninform = 49
+      INTEGER * 4, PARAMETER :: ninform = 50
       CHARACTER ( LEN = 31 ), PARAMETER :: finform( ninform ) = (/             &
          'error                          ', 'out                            ', &
          'print_level                    ', 'start_print                    ', &
@@ -300,14 +303,15 @@
          'gamma_c                        ', 'gamma_f                        ', &
          'reduce_infeas                  ', 'obj_unbounded                  ', &
          'potential_unbounded            ', 'identical_bounds_tol           ', &
-         'mu_lunge                       ', 'indicator_tol_p                ', &
+         'mu_pounce                      ', 'indicator_tol_p                ', &
          'indicator_tol_pd               ', 'indicator_tol_tapia            ', &
          'cpu_time_limit                 ', 'clock_time_limit               ', &
          'remove_dependencies            ',                                    &
          'treat_zero_bounds_as_general   ', 'just_feasible                  ', &
          'getdua                         ', 'puiseux                        ', &
          'every_order                    ', 'feasol                         ', &
-         'balance_initial_complentarity  ', 'space_critical                 ', &
+         'balance_initial_complentarity  ', 'crossover                      ', &
+         'space_critical                 ',                                    &
          'deallocate_error_fatal         ', 'prefix                         ', &
          'FDC_control                    ', 'SBLS_control                   ' /)
 
@@ -383,8 +387,8 @@
                                   BQPB_control%potential_unbounded )
       CALL MATLAB_fill_component( pointer, 'identical_bounds_tol',             &
                                   BQPB_control%identical_bounds_tol )
-      CALL MATLAB_fill_component( pointer, 'mu_lunge',                         &
-                                  BQPB_control%mu_lunge )
+      CALL MATLAB_fill_component( pointer, 'mu_pounce',                        &
+                                  BQPB_control%mu_pounce )
       CALL MATLAB_fill_component( pointer, 'indicator_tol_p',                  &
                                   BQPB_control%indicator_tol_p )
       CALL MATLAB_fill_component( pointer, 'indicator_tol_pd',                 &
@@ -411,6 +415,8 @@
                                   BQPB_control%feasol )
       CALL MATLAB_fill_component( pointer, 'balance_initial_complentarity',    &
                                   BQPB_control%balance_initial_complentarity )
+      CALL MATLAB_fill_component( pointer, 'crossover',                        &
+                                  BQPB_control%crossover )
       CALL MATLAB_fill_component( pointer, 'space_critical',                   &
                                   BQPB_control%space_critical )
       CALL MATLAB_fill_component( pointer, 'deallocate_error_fatal',           &
@@ -645,7 +651,7 @@
       CALL MATLAB_copy_to_ptr( REAL( BQPB_inform%time%clock_preprocess, wp ),  &
                       mxGetPr( BQPB_pointer%time_pointer%clock_preprocess ) )
       CALL MATLAB_copy_to_ptr( REAL( BQPB_inform%time%clock_find_dependent,wp),&
-                      mxGetPr( BQPB_pointer%time_pointer%clock_find_dependent ) )
+                      mxGetPr( BQPB_pointer%time_pointer%clock_find_dependent) )
       CALL MATLAB_copy_to_ptr( REAL( BQPB_inform%time%clock_analyse, wp ),     &
                       mxGetPr( BQPB_pointer%time_pointer%clock_analyse ) )
       CALL MATLAB_copy_to_ptr( REAL( BQPB_inform%time%clock_factorize, wp ),   &

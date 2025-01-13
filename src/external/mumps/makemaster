@@ -1,0 +1,148 @@
+#  Main body of the installation makefile for the MUMPS stub
+
+#  N. Gould, D. Orban and Ph. L. Toint.
+#  This version: 2024-11-14
+
+#  include standard GALAHAD makefile definitions
+
+include $(GALAHAD)/src/makedefs/definitions
+
+#  Libraries used
+
+LIBS = -lgalahad $(MUMPS) $(MPI) $(LAPACK) $(BLAS)
+PLIBS = $(LIBS) -lgalahad_problem
+
+#  compilation agenda
+
+BASICZ = blas lapack symbols dummy blas_inter lapack_inter
+
+MUMPSS = $(BASICSZ) $(MULGS)(mumps_types.o) $(MULGS)(mumps.o)
+MUMPSD = $(BASICSZ) $(MULGD)(mumps_types.o) $(MULGD)(mumps.o)
+MUMPSQ = $(BASICSZ) $(MULGQ)(mumps_types.o) $(MULGQ)(mumps.o)
+MUMPSS64 = $(BASICSZ) $(MULGS64)(mumps_types.o) $(MULGS64)(mumps.o)
+MUMPSD64 = $(BASICSZ) $(MULGD64)(mumps_types.o) $(MULGD64)(mumps.o)
+MUMPSQ64 = $(BASICSZ) $(MULGQ64)(mumps_types.o) $(MULGQ64)(mumps.o)
+
+MUMPSST = $(MUMPSS) $(OBJ)/mumpst.o
+MUMPSDT = $(MUMPSD) $(OBJ)/mumpst.o
+MUMPSDQ = $(MUMPSD) $(OBJ)/mumpst.o
+
+RMUMPSDT = $(OBJ)/mumpst.o -L$(OBJ) $(LIBS)
+RMUMPSST = $(OBJ)/mumpst.o -L$(OBJ) $(LIBS)
+RMUMPSQT = $(OBJ)/mumpst.o -L$(OBJ) $(LIBS)
+
+#  mumps
+
+mumps_silent: mumps_$(PRECIS)
+mumps: mumps_$(PRECIS)
+	@printf ' %-21s\n' "GALAHAD: $(MUMPS) ($(PRECIS) $(SUCC)"
+mumps_single: $(MUMPSS)
+	$(RANLIB) $(MULGS)
+mumps_double: $(MUMPSD)
+	$(RANLIB) $(MULGD)
+mumps_quadruple: $(MUMPSQ)
+	$(RANLIB) $(MULGQ)
+mumps_single_64: $(MUMPSS64)
+	$(RANLIB) $(MULGS64)
+mumps_double_64: $(MUMPSD64)
+	$(RANLIB) $(MULGD64)
+mumps_quadruple_64: $(MUMPSQ64)
+	$(RANLIB) $(MULGQ64)
+
+#  tests
+
+mumpsst: $(MUMPSST)
+	echo " Exhaustive test of subroutine interface to mumps"
+	cd ../mumps ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_mumps \
+                         $(RMUMPSST)
+	- ../mumps/run_mumps > ../mumps/mumpst.output 2>&1
+	cat ../mumps/mumpst.output
+	rm ../mumps/run_mumps
+
+mumpsdt: $(MUMPSDT)
+	echo " Exhaustive test of subroutine interface to mumps"
+	cd ../mumps ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_mumps \
+                         $(RMUMPSDT)
+	- ../mumps/run_mumps > ../mumps/mumpsdt.output 2>&1
+	cat ../mumps/mumpsdt.output
+	rm ../mumps/run_mumps
+
+mumpsqt: $(MUMPSQT)
+	echo " Exhaustive test of subroutine interface to mumps"
+	cd ../mumps ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_mumps \
+                         $(RMUMPSQT)
+	- ../mumps/run_mumps > ../mumps/mumpsqt.output 2>&1
+	cat ../mumps/mumpsqt.output
+	rm ../mumps/run_mumps
+
+#  blas and lapack generic packages and interfaces
+
+blas:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            blas_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+lapack:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            lapack_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+symbols:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            symbols_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+dummy:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            dummy_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+blas_inter:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            blas_inter_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+lapack_inter:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            lapack_inter_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+#  individual compilations
+
+mumps_types.o: $(MULG)(mumps_types.o)
+
+$(MULG)(mumps_types.o): ../mumps/mumps_types.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "mumps_types  "
+	$(CP) ../mumps/mumps_types.F90 $(OBJ)/mumps_types.F90
+	cd $(OBJ); $(FORTRAN) -o mumps_types.o $(FFLAGS) mumps_types.F90 \
+                     -I $(MUMPSINCLUDE)
+	cd $(OBJ); $(MUARR) mumps_types.o ; $(RM) mumps_types.F90 mumps_types.o
+	$(MURMARFILE) mumps.o
+	$(MVMODS)
+	@printf '[ OK ]\n'
+
+mumps.o: $(MULG)(mumps.o)
+
+$(MULG)(mumps.o): ../../dum/mumps.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "mumps  "
+	$(CP) ../../dum/mumps.F90 $(OBJ)/mumps.F90
+	cd $(OBJ); $(FORTRAN) -o mumps.o $(FFLAGS) mumps.F90
+	cd $(OBJ); $(MUARR) mumps.o ; $(RM) mumps.F90 mumps.o
+	$(RANLIB) $(MULG)
+	@printf '[ OK ]\n'
+
+#  test programs
+
+mumpst.o: $(OBJ)/mumpst.o
+
+$(OBJ)/mumpst.o: ../mumps/mumpst.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "mumpst  "
+	$(CP) ../mumps/mumpst.F90 $(OBJ)/mumpst.F90
+	cd $(OBJ) ; $(FORTRAN) -o mumpst.o $(FFLAGSS) mumpst.F90
+	@printf '[ OK ]\n'
+
+#  book keeping
+
+clean:
+	@printf ' %-9s\t\t' "Cleaning"
+	$(RM) $(MULG) $(OBJ)/mumpss.o $(OBJ)/mumpst.o
+	@printf '[ OK ]\n'
+
+cleanall:
+	@printf ' %-14s\t\t' "Removing all $(PRECIS) precision object and module files"
+	$(RM) -r $(OBJ)/* $(MOD)/*
+	@printf '[ OK ]\n'

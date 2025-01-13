@@ -5,19 +5,18 @@
    TYPE ( ARC_control_type ) :: control
    TYPE ( ARC_inform_type ) :: inform
    TYPE ( ARC_full_data_type ) :: data
-   TYPE ( NLPT_userdata_type ) :: userdata
    REAL ( KIND = wp ) :: f
    INTEGER, ALLOCATABLE, DIMENSION( : ) :: H_row, H_col, H_ptr
    REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: X, G, U, V
    EXTERNAL :: FUN, GRAD, HESS
-   INTEGER :: s, status, eval_status, ne
+   INTEGER :: status, eval_status, ne
    INTEGER, PARAMETER :: n = 3
    REAL ( KIND = wp ), PARAMETER :: p = 4.0_wp
 ! start problem data
    ALLOCATE( X( n ), G( n ), U( n ), V( n ) )
    ALLOCATE( H_row( 0 ), H_col( 0 ), H_ptr( 0 ) )
    X = 1.0_wp                               ! start from one
-! problem data complete   
+! problem data complete
    CALL ARC_initialize( data, control, inform ) ! Initialize control parameters
    control%hessian_available = .FALSE.          ! Hessian products will be used
 !  control%print_level = 5
@@ -26,8 +25,8 @@
                     'absent', ne, H_row, H_col, H_ptr )
    status = 1                                   ! Set for initial entry
    DO                                           ! Loop to solve problem
-     CALL ARC_solve_reverse_without_h( data, status, eval_status,              &
-                                       X, f, G, U, V )
+     CALL ARC_solve_reverse_without_mat( data, status, eval_status,            &
+                                         X, f, G, U, V )
      SELECT CASE ( status )                     ! reverse communication
      CASE ( 2 )                                 ! Obtain the objective function
        f = ( X( 1 ) + X( 3 ) + p ) ** 2 + ( X( 2 ) + X( 3 ) ) ** 2             &
@@ -55,8 +54,8 @@
    CALL ARC_information( data, inform, status )
    IF ( inform%status == 0 ) THEN          ! Successful return
      WRITE( 6, "( ' ARC: ', I0, ' iterations -',                               &
-    &     ' optimal objective value =',                                        &
-    &       ES12.4, ', ||g|| =', ES11.4, /, ' Optimal solution = ', ( 5ES12.4 ) )" )                &
+    &     ' optimal objective value =', ES12.4, ', ||g|| =', ES11.4, /,        &
+          ' Optimal solution = ', ( 5ES12.4 ) )" )                             &
      inform%iter, inform%obj, inform%norm_g, X
    ELSE                                    ! Error returns
      WRITE( 6, "( ' ARC_solve exit status = ', I6 ) " ) inform%status

@@ -21,13 +21,15 @@ end
 
 [ control ]   = galahad_gltr( 'initial' ) ;
 control.out = 6 ;
-control.print_level = 0 ;
+control.print_level = 1 ;
 
 fprintf('solve dense examples \n')
+control.unitm = 1 ;
 [ x, obj, inform ] = galahad_gltr( H, c, f, radius, control ) ;
 disp( sprintf( '%s %13.6e %s %2.0f', ...
   ' - gltr: optimal f =', obj, '- status =', inform.status ) )
 galahad_gltr( 'final' )
+
 control.unitm = 0 ;
 [ x, obj, inform ] = galahad_gltr( H, c, f, radius, control, M ) ;
 disp( sprintf( '%s %13.6e %s %2.0f', ...
@@ -42,6 +44,7 @@ control.unitm = 1 ;
 disp( sprintf( '%s %13.6e %s %2.0f', ...
   ' - gltr: optimal f =', obj, '- status =', inform.status ) )
 galahad_gltr( 'final' )
+
 control.unitm = 0 ;
 [ x, obj, inform ] = galahad_gltr( SH, c, f, radius, control, SM ) ;
 disp( sprintf( '%s %13.6e %s %2.0f', ...

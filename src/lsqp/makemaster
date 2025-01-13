@@ -1,10 +1,10 @@
 #  Main body of the installation makefile for the GALAHAD LSQP package
 
-#  Nick Gould, for GALAHAD productions 
-#  This version: 2021-05-29
+#  Nick Gould, for GALAHAD productions
+#  This version: 2023-05-11
 
 #  include standard GALAHAD makefile defaults before package-specifics
- 
+
 include $(GALAHAD)/src/makedefs/defaults
 
 #  ===========================================================================
@@ -18,10 +18,7 @@ PACKAGE = LSQP
 
 #  auxiliary packages that current package depends on (prepend with make_)
 
-DEPENDENCIES = make_sbls_deps make_sbls make_lms make_rand \
-               make_gltr make_lpqp make_fdc make_fit \
-               make_qpp make_trans make_scale make_scu \
-               make_ir make_mop make_cro make_presolve make_qpd
+DEPENDENCIES = make_qpd_deps make_qpd
 
 #  other packages that depend on package
 
@@ -31,11 +28,20 @@ DEPENDS = lcf qpb lpqpa lpqpb trimsqp
 #  on (prepend with make_ciface_)
 
 CDEPENDENCIES = make_ciface_common make_sbls_deps make_ciface_sbls \
-                make_ciface_gltr
+                make_ciface_gltr make_ciface_fdc
 
-#  other C interface packages that depend on current interface package 
+#  other C interface packages that depend on current interface package
 
-CDEPENDS = qpb
+CDEPENDS = qpb_ciface
+
+#  auxiliary packages that the python interface to the current package depends
+#  on (prepend with make_pyiface_)
+
+PYDEPENDENCIES = make_pyiface_sbls make_pyiface_gltr make_pyiface_fdc
+
+#  other python interface packages that depend on current interface package
+
+PYDEPENDS = qpb_pyiface
 
 #  auxiliary packages that are needed for tests (prepend with make_)
 
@@ -54,11 +60,11 @@ CUTEST_EXAMPLE = LPBAND.SIF
 #  ===========================================================================
 
 #  include standard GALAHAD makefile definitions
- 
+
 include $(GALAHAD)/src/makedefs/definitions
 
 #  include compilation and run instructions
- 
+
 include $(GALAHAD)/src/makedefs/instructions
 
 #  include standard package compilation instructions
@@ -66,5 +72,5 @@ include $(GALAHAD)/src/makedefs/instructions
 include $(GALAHAD)/src/makedefs/compile
 
 #  include required package intermediaries
- 
+
 include $(GALAHAD)/src/makedefs/intermediaries

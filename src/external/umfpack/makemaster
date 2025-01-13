@@ -1,0 +1,138 @@
+#  Main body of the installation makefile for the UMFPACK stub
+
+#  N. Gould, D. Orban and Ph. L. Toint.
+#  This version: 2024-01-13
+
+#  include standard GALAHAD makefile definitions
+
+include $(GALAHAD)/src/makedefs/definitions
+
+#  Libraries used
+
+LIBS = -lgalahad $(UMFPACK) $(LAPACK) $(BLAS)
+PLIBS = $(LIBS) -lgalahad_problem
+
+#  compilation agenda
+
+BASICZ = blas lapack symbols dummy blas_inter lapack_inter
+
+UMFPACKS = $(BASICSZ) $(ULGS)(umfpack.o)
+UMFPACKD = $(BASICSZ) $(ULGD)(umfpack.o)
+UMFPACKQ = $(BASICSZ) $(ULGQ)(umfpack.o)
+UMFPACKS64 = $(BASICSZ) $(ULGS64)(umfpack.o)
+UMFPACKD64 = $(BASICSZ) $(ULGD64)(umfpack.o)
+UMFPACKQ64 = $(BASICSZ) $(ULGQ64)(umfpack.o)
+
+UMFPACKST = $(UMFPACKS) $(OBJS)/umfpackt.o
+UMFPACKDT = $(UMFPACKD) $(OBJD)/umfpackt.o
+UMFPACKQT = $(UMFPACKQ) $(OBJD)/umfpackt.o
+
+RUMFPACKST = $(OBJS)/umfpackt.o -L$(OBJS) $(LIBS)
+RUMFPACKDT = $(OBJD)/umfpackt.o -L$(OBJD) $(LIBS)
+RUMFPACKQT = $(OBJD)/umfpackt.o -L$(OBJQ) $(LIBS)
+
+#  umfpack
+
+umfpack_silent: umfpack_$(PRECIS)
+umfpack: umfpack_$(PRECIS)
+	@printf ' %-21s\n' "GALAHAD: $(UMFPACK) ($(PRECIS) $(SUCC)"
+umfpack_single: $(UMFPACKS)
+	$(RANLIB) $(ULGS)
+umfpack_double: $(UMFPACKD)
+	$(RANLIB) $(ULGD)
+umfpack_quadruple: $(UMFPACKQ)
+	$(RANLIB) $(ULGQ)
+umfpack_single_64: $(UMFPACKS64)
+	$(RANLIB) $(ULGS64)
+umfpack_double_64: $(UMFPACKD64)
+	$(RANLIB) $(ULGD64)
+umfpack_quadruple_64: $(UMFPACKQ64)
+	$(RANLIB) $(ULGQ64)
+
+#  tests
+
+umfpackst: $(UMFPACKST)
+	echo " Exhaustive test of subroutine interface to umfpack"
+	cd ../umfpack ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_umfpack \
+                         $(RUMFPACKST)
+	- ../umfpack/run_umfpack > ../umfpack/umfpackt.output 2>&1
+	cat ../umfpack/umfpackt.output
+	rm ../umfpack/run_umfpack
+
+umfpackdt: $(UMFPACKDT)
+	echo " Exhaustive test of subroutine interface to umfpack"
+	cd ../umfpack ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_umfpack \
+                         $(RUMFPACKDT)
+	- ../umfpack/run_umfpack > ../umfpack/umfpackdt.output 2>&1
+	cat ../umfpack/umfpackdt.output
+#	- ../umfpack/run_umfpack
+	rm ../umfpack/run_umfpack
+
+umfpackdq: $(UMFPACKQT)
+	echo " Exhaustive test of subroutine interface to umfpack"
+	cd ../umfpack ; $(FORTRAN) $(RUNFFLAGSOMP) $(SPECIAL) -o run_umfpack \
+                         $(RUMFPACKQT)
+	- ../umfpack/run_umfpack > ../umfpack/umfpackqt.output 2>&1
+	cat ../umfpack/umfpackqt.output
+#	- ../umfpack/run_umfpack
+	rm ../umfpack/run_umfpack
+
+#  blas and lapack generic packages and interfaces
+
+blas:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            blas_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+lapack:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            lapack_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+symbols:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            symbols_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+dummy:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            dummy_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+blas_inter:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            blas_inter_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+lapack_inter:
+	( cd ../../general ; $(MAKE) -f $(GALAHAD)/makefiles/$(VERSION) \
+            lapack_inter_silent PRECIS=$(PRECIS) PWD=$(PWD)/../../general )
+
+#  individual compilations
+
+umfpack.o: $(ULG)(umfpack.o)
+
+$(ULG)(umfpack.o): ../../dum/umfpack.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "umfpack  "
+	$(CP) ../../dum/umfpack.F90 $(OBJ)/umfpack.F90
+	cd $(OBJ); $(FORTRAN) -o umfpack.o $(FFLAGS) umfpack.F90
+	cd $(OBJ); $(UARR) umfpack.o ; $(RM) umfpack.F90 umfpack.o
+	$(RANLIB) $(ULG)
+	@printf '[ OK ]\n'
+
+#  test programs
+
+umfpackt.o: $(OBJ)/umfpackt.o
+
+$(OBJ)/umfpackt.o: ../umfpack/umfpackt.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "umfpackt  "
+	$(CP) ../umfpack/umfpackt.F90 $(OBJ)/umfpackt.F90
+	cd $(OBJ) ; $(FORTRAN) -o umfpackt.o $(FFLAGSS) umfpackt.F90
+	@printf '[ OK ]\n'
+
+#  book keeping
+
+clean:
+	@printf ' %-9s\t\t' "Cleaning"
+	$(RM) $(ULG) $(OBJ)/umfpacks.o $(OBJ)/umfpackt.o
+	@printf '[ OK ]\n'
+
+cleanall:
+	@printf ' %-14s\t\t' "Removing all $(PRECIS) precision object and module files"
+	$(RM) -r $(OBJ)/* $(MOD)/*
+	@printf '[ OK ]\n'

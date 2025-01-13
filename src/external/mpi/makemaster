@@ -1,0 +1,68 @@
+#  Main body of the installation makefile for the MPi stub
+
+#  N. Gould, D. Orban and Ph. L. Toint.
+#  This version: 2024-11-14
+
+#  include standard GALAHAD makefile definitions
+
+include $(GALAHAD)/src/makedefs/definitions
+
+#  Libraries used
+
+LIBS = -lgalahad $(MPI) $(LAPACK) $(BLAS)
+PLIBS = $(LIBS) -lgalahad_problem
+
+#  Archive manipulation strings
+
+MPIARR = $(AR) $(ARREPFLAGS) $(MPILG)
+
+#  compilation agenda
+
+MPIS = $(MPILGS)(mpi_single.o)
+MPID = $(MPILGD)(mpi_double.o)
+MPIQ = $(MPILGQ)(mpi_quadruple.o)
+MPIS64 = $(MPILGS64)(mpi_single_64.o)
+MPID64 = $(MPILGD64)(mpi_double_64.o)
+MPIQ64 = $(MPILGQ64)(mpi_quadruple_64.o)
+
+#  mpi
+
+mpi_silent: mpi_$(PRECIS)
+mpi: mpi_$(PRECIS)
+	@printf ' %-21s\n' "GALAHAD: $(MPI) ($(PRECIS) $(SUCC)"
+mpi_single: $(MPIS)
+	$(RANLIB) $(MPILGS)
+mpi_double: $(MPID)
+	$(RANLIB) $(MPILGD)
+mpi_quadruple: $(MPIQ)
+	$(RANLIB) $(MPILGQ)
+mpi_single_64: $(MPIS64)
+	$(RANLIB) $(MPILGS64)
+mpi_double_64: $(MPID64)
+	$(RANLIB) $(MPILGD64)
+mpi_quadruple_64: $(MPIQ64)
+	$(RANLIB) $(MPILGQ64)
+
+#  individual compilations
+
+mpi.o: $(MPILG)(mpi_$(PRECIS).o)
+
+$(MPILG)(mpi_$(PRECIS).o): ../../dum/mpi.F90
+	@printf ' %-9s %-15s\t\t' "Compiling" "mpi  "
+	$(CP) ../../dum/mpi.F90 $(OBJ)/mpi.F90
+	cd $(OBJ); $(FORTRAN) -o mpi_$(PRECIS).o $(FFLAGS) mpi.F90
+	cd $(OBJ); $(MPIARR) mpi_$(PRECIS).o ; $(RM) mpi.F90 mpi_$(PRECIS).o
+	$(RANLIB) $(MPILG)
+	@printf '[ OK ]\n'
+
+#  book keeping
+
+clean:
+	@printf ' %-9s\t\t' "Cleaning"
+	$(RM) $(MPILG) $(OBJ)/mpis.o $(OBJ)/mpit.o
+	@printf '[ OK ]\n'
+
+cleanall:
+	@printf ' %-14s\t\t' "Removing all $(PRECIS) precision object and module files"
+	$(RM) -r $(OBJ)/* $(MOD)/*
+	@printf '[ OK ]\n'

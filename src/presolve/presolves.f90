@@ -1,11 +1,10 @@
-! THIS VERSION: GALAHAD 2.1 - 22/03/2007 AT 09:00 GMT.
+! THIS VERSION: GALAHAD 4.1 - 2022-11-27 AT 14:00 GMT.
    PROGRAM GALAHAD_PRESOLVE_EXAMPLE
    USE GALAHAD_QPT_double                           ! Double precision
    USE GALAHAD_PRESOLVE_double                      ! Double precision
    USE GALAHAD_SYMBOLS                              ! The GALAHAD symbols
    IMPLICIT NONE
    INTEGER, PARAMETER :: wp = KIND( 1.0D0 )         ! Set precision
-   REAL ( KIND = wp ), PARAMETER  :: infinity = 10._wp ** 20
    REAL ( KIND = wp ), PARAMETER  :: r0 = 0.0_wp, r1 = 1.0_wp
    REAL ( KIND = wp ), PARAMETER  :: r2 = 2.0_wp, r3 = 3.0_wp
    TYPE ( QPT_problem_type )      :: problem
@@ -62,8 +61,8 @@
    ELSE IF ( data_storage_type == - 2 ) THEN
      CALL SMT_put( problem%H%type, 'DENSE', s )
      CALL SMT_put( problem%A%type, 'DENSE', s )
-     ALLOCATE( problem%H%val( n*(n+1)/2 ) )
-     ALLOCATE( problem%A%val( n*m ) )
+     ALLOCATE( problem%H%val( n * ( n + 1 ) / 2 ) )
+     ALLOCATE( problem%A%val( n * m ) )
      problem%H%val = (/ r1,                           &
                         r0, r0,                       &
                         r0, r0, r0,                   &
@@ -78,18 +77,18 @@
    END IF
 ! problem data complete
 ! write the original formulation
-   CALL QPT_write_problem( 6, problem ) 
-! set the default PRESOLVE control parameters            
+   CALL QPT_write_problem( 6, problem )
+! set the default PRESOLVE control parameters
    CALL PRESOLVE_initialize( control, inform, data )
    IF ( inform%status /= 0 ) STOP
-   control%print_level = GALAHAD_TRACE              ! Ask for some output
+!  control%print_level = GALAHAD_TRACE              ! Ask for some output
 ! apply presolving to reduce the problem
    CALL PRESOLVE_apply( problem, control, inform, data )
    IF ( inform%status /= 0 ) STOP
 ! write the reduced problem
-   CALL QPT_write_problem( 6, problem ) 
+   CALL QPT_write_problem( 6, problem )
 ! solve the reduced problem
-   ! CALL QPSOLVER (unnecessary here, because the reduced problem has a 
+   ! CALL QPSOLVER (unnecessary here, because the reduced problem has a
    ! single feasible point in this example)
 ! restore the solved reduced problem to the original formulation
    CALL PRESOLVE_restore( problem, control, inform, data )

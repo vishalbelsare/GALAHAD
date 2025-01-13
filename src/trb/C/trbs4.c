@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 #include <math.h>
-#include "trb.h"
+#include "galahad_precision.h"
+#include "galahad_trb.h"
 
 int main(void) {
 
@@ -13,39 +14,39 @@ int main(void) {
     struct trb_inform_type inform;
 
     // Initialize TRB
-    trb_initialize( &data, &control, &inform );
+    ipc_ status;
+    trb_initialize( &data, &control, &status );
 
     // Set user-defined control options
     control.f_indexing = false; // C sparse matrix indexing (default)
-    control.print_level = 1;
+    //control.print_level = 1;
 
     // Set problem data
-    int n = 3; // dimension
-    int ne = 5; // Hesssian elements
-    double x[] = {1.,1.,1.}; // start from one
-    double infty = 1e20; // infinity
-    double x_l[] = {-infty,-infty, 0.}; 
-    double x_u[] = {1.1,1.1,1.1};
+    ipc_ n = 3; // dimension
+    ipc_ ne = 5; // Hesssian elements
+    rpc_ x[] = {1.,1.,1.}; // start from one
+    rpc_ infty = 1e20; // infinity
+    rpc_ x_l[] = {-infty,-infty, 0.};
+    rpc_ x_u[] = {1.1,1.1,1.1};
     char H_type[] = "absent"; // specify Hessian-vector products
-    
+
     // Reverse-communication input/output
-    int eval_status, nnz_u, nnz_v;
-    double f;
-    double g[n];
-    double u[n], v[n];
-    int index_nz_u[n], index_nz_v[n];
+    ipc_ eval_status, nnz_u = 0, nnz_v;
+    rpc_ f = 0.0;
+    rpc_ g[n];
+    rpc_ u[n], v[n];
+    ipc_ index_nz_u[n], index_nz_v[n];
 
     // Set Hessian storage format, structure and problem bounds
-    int status;
-    trb_import( &control, &data, &status, n, x_l, x_u, 
+    trb_import( &control, &data, &status, n, x_l, x_u,
                 H_type, ne, NULL, NULL, NULL );
 
     // Solve the problem
     while(true){ // reverse-communication loop
 
         // Call TRB_solve
-        trb_solve_reverse_without_mat( &data, &status, &eval_status, 
-                                       n, x, f, g, u, v, index_nz_v, &nnz_v, 
+        trb_solve_reverse_without_mat( &data, &status, &eval_status,
+                                       n, x, f, g, u, v, index_nz_v, &nnz_v,
                                        index_nz_u, nnz_u );
 
         // Evaluate f(x) and its derivatives as required
@@ -71,10 +72,10 @@ int main(void) {
             u[2] = 0.25 * v[2];
             eval_status = 0; // record successful evaluation
         }else if(status == 7){ // obtain sparse Hessian-vector product
-            double tmp[] = {0., 0., 0.};
+            rpc_ tmp[] = {0., 0., 0.};
             bool used[] = {false, false, false};
-            for(int i = 0; i < nnz_v; i++){
-                int j = index_nz_v[i];
+            for(ipc_ i = 0; i < nnz_v; i++){
+                ipc_ j = index_nz_v[i];
                 switch(j){
                     case 0:
                         tmp[0] = tmp[0] + 2.0 * v[0] - cos(x[0]) * v[0];
@@ -99,7 +100,7 @@ int main(void) {
                 }
             }
             nnz_u = 0;
-            for(int j = 0; j < 3; j++){
+            for(ipc_ j = 0; j < 3; j++){
                 if(used[j]){
                 u[j] = tmp[j];
                 nnz_u = nnz_u + 1;
@@ -117,20 +118,25 @@ int main(void) {
 
     // Print solution details
     if(inform.status == 0){ // successful return
-        printf("iter: %d \n", inform.iter);
+        printf("iter: %" d_ipc_ " \n", inform.iter);
         printf("x: ");
-        for(int i = 0; i < n; i++) printf("%f ", x[i]);
-        printf("\n");
-        printf("objective: %f \n", inform.obj);
-        printf("gradient: ");
-        for(int i = 0; i < n; i++) printf("%f ", g[i]);
-        printf("\n");
-        printf("f_eval: %d \n", inform.f_eval);
+#ifdef REAL_128
+        for(ipc_ i = 0; i < n; i++) printf("%f ", (double)x[i]);
+        printf("\nobjective: %f \ngradient: ", (double)inform.obj);
+        for(ipc_ i = 0; i < n; i++) printf("%f ", (double)g[i]);
+        printf("\nf_eval: %" d_ipc_ " \n", inform.f_eval);
+        printf("time: %f \n", (double)inform.time.clock_total);
+#else
+        for(ipc_ i = 0; i < n; i++) printf("%f ", x[i]);
+        printf("\nobjective: %f \ngradient: ", inform.obj);
+        for(ipc_ i = 0; i < n; i++) printf("%f ", g[i]);
+        printf("\nf_eval: %" d_ipc_ " \n", inform.f_eval);
         printf("time: %f \n", inform.time.clock_total);
-        printf("status: %d \n", inform.status);
+#endif
+        printf("status: %" d_ipc_ " \n", inform.status);
      }else{ // error returns
         printf("TRB error in solve\n");
-        printf("status: %d \n", inform.status);
+        printf("status: %" d_ipc_ " \n", inform.status);
     }
 
     // Delete internal workspace

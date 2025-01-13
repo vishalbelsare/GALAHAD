@@ -21,15 +21,15 @@
    TYPE ( LSRT_data_type ) :: data
    TYPE ( LSRT_control_type ) :: control
    TYPE ( LSRT_inform_type ) :: inform
-   sigmae = (/ 0.0001_working, 0.01_working, 1.0_working, 100.0_working,        &
+   sigmae = (/ 0.0001_working, 0.01_working, 1.0_working, 100.0_working,       &
                10000.0_working /)
    rhos = (/ 0.01_working, 0.0001_working /)
 
 !  Set up data -
 
 !  A = ( I_m - yy^T/2y^Ty) D ( I_n - zz^T/2z^Tz), where
-!  y_i = 1 (i=1:n), z_i = 1 (i=1:n:2), -1 (i=2:n:2) and 
-!  D=0 except D_ii = c + e*i (i=1:min(m,n)), 
+!  y_i = 1 (i=1:n), z_i = 1 (i=1:n:2), -1 (i=2:n:2) and
+!  D=0 except D_ii = c + e*i (i=1:min(m,n)),
 !  e = (1-rho)/(1-min(m,n)), c = 1-e
 !  b_i = 1
 
@@ -39,13 +39,13 @@
    DO dim = 1, dim_max
 !  DO dim = 3, 3
     SELECT CASE( dim )
-    CASE ( 1 ) 
+    CASE ( 1 )
       n = 5000
       m = 1000
-    CASE ( 2 ) 
+    CASE ( 2 )
       n = 1000
       m = 5000
-    CASE ( 3 ) 
+    CASE ( 3 )
       n = 5000
       m = 5000
     END SELECT
@@ -56,24 +56,24 @@
     Y = one
     DO i = 1, n, 2
       Z( i ) = one ; Z( i + 1 ) = - one
-    END DO 
+    END DO
     tyty = two * DOT_PRODUCT( Y, Y )
     tztz = two * DOT_PRODUCT( Z, Z )
 
     DO cond = 1, cond_max
 !   DO cond = 2, 2
      rho = rhos( cond )
- 
+
      e = ( one - rho ) / ( one - mn ) ; c = one - e
      DO i = 1, mn
        D( i ) = c + e * i
      END DO
-   
+
      DO sig = 1, sig_max
 !    DO sig = 3, 3
       sigma = sigmae( sig )
 
-      CALL LSRT_initialize( data, control, inform ) ! Initialize control parameters
+      CALL LSRT_initialize( data, control, inform ) ! Initialize control params
       control%fraction_opt = 0.99            ! Only require 99% of the best
 !     control%print_level = 2
 !     control%itmax = 4761
@@ -110,41 +110,41 @@
 !         U( m ) = one ; U( 1 : m - 1 ) = zero ! re-initialize u to b
           U = one                     !  re-initialize u to b
         CASE ( - 2 : 0 )              !  Successful return
-          prod = DOT_PRODUCT( X, Z ) / tztz
-          Wn = X - prod * Z
-          IF ( m <= n ) THEN
-            Wm = Wn( : m ) * D( : m )
-          ELSE
-            Wm( : n ) = Wn * D
-            Wm( n + 1 : ) = zero
-          END IF
-          prod = DOT_PRODUCT( Wm, Y ) / tyty
-          RES = Wm - prod * Y - one
-          WRITE( 6, "( 1X, I0, ' 1st pass and ', I0, ' 2nd pass iterations' )" )&
-            inform%iter, inform%iter_pass2
-          WRITE( 6, "( ' objective recurred and calculated = ', 2ES16.8 )" )    &
-            inform%obj, 0.5_working * DOT_PRODUCT( RES, RES ) + ( sigma / p ) * &
-            ( SQRT( DOT_PRODUCT( X, X ) ) ) ** p
-          WRITE( 6, "( '   ||x||  recurred and calculated = ', 2ES16.8 )" )     &
-            inform%x_norm, SQRT( DOT_PRODUCT( X, X ) )
-          WRITE( 6, "( ' ||Ax-b|| recurred and calculated = ', 2ES16.8 )" )     &
-            inform%r_norm, SQRT( DOT_PRODUCT( RES, RES ) )
-          WRITE( 6, "( ' m, n, cond, sigma ',  I0, 1X, I0, 2ES12.4 )" )        &
-            m, n, one / rho, sigma
-          WRITE( 6, "( ' min, mean, max, number boundary iterations ',          &
-         & I0, F4.1, 1X, I0, 1X, I0 )" ) inform%biter_min, inform%biter_mean,   &
-             inform%biter_max, inform%biters
-          WRITE( 44, "( 2I6, 2ES12.4, I4, F5.1, I4, I6 )" ) m, n, one / rho,    &
-            sigma, inform%biter_min, inform%biter_mean,                        &
-             inform%biter_max, inform%biters
-          CALL LSRT_terminate( data, control, inform ) !delete internal workspace
-          it_min( sig, cond, dim ) = inform%biter_min
-          it_max( sig, cond, dim ) = inform%biter_max
-          it_mean( sig, cond, dim ) = inform%biter_mean
-          EXIT
+         prod = DOT_PRODUCT( X, Z ) / tztz
+         Wn = X - prod * Z
+         IF ( m <= n ) THEN
+           Wm = Wn( : m ) * D( : m )
+         ELSE
+           Wm( : n ) = Wn * D
+           Wm( n + 1 : ) = zero
+         END IF
+         prod = DOT_PRODUCT( Wm, Y ) / tyty
+         RES = Wm - prod * Y - one
+         WRITE( 6, "( 1X, I0, ' 1st pass and ', I0, ' 2nd pass iterations' )" )&
+           inform%iter, inform%iter_pass2
+         WRITE( 6, "( ' objective recurred and calculated = ', 2ES16.8 )" )    &
+           inform%obj, 0.5_working * DOT_PRODUCT( RES, RES ) + ( sigma / p ) * &
+           ( SQRT( DOT_PRODUCT( X, X ) ) ) ** p
+         WRITE( 6, "( '   ||x||  recurred and calculated = ', 2ES16.8 )" )     &
+           inform%x_norm, SQRT( DOT_PRODUCT( X, X ) )
+         WRITE( 6, "( ' ||Ax-b|| recurred and calculated = ', 2ES16.8 )" )     &
+           inform%r_norm, SQRT( DOT_PRODUCT( RES, RES ) )
+         WRITE( 6, "( ' m, n, cond, sigma ',  I0, 1X, I0, 2ES12.4 )" )         &
+           m, n, one / rho, sigma
+         WRITE( 6, "( ' min, mean, max, number boundary iterations ',          &
+          I0, F4.1, 1X, I0, 1X, I0 )" ) inform%biter_min, inform%biter_mean,   &
+            inform%biter_max, inform%biters
+         WRITE( 44, "( 2I6, 2ES12.4, I4, F5.1, I4, I6 )" ) m, n, one / rho,    &
+           sigma, inform%biter_min, inform%biter_mean,                         &
+            inform%biter_max, inform%biters
+         CALL LSRT_terminate( data, control, inform ) !delete internal workspace
+         it_min( sig, cond, dim ) = inform%biter_min
+         it_max( sig, cond, dim ) = inform%biter_max
+         it_mean( sig, cond, dim ) = inform%biter_mean
+         EXIT
         CASE DEFAULT !  Error returns
           WRITE( 6, "( ' LSRT_solve exit status = ', I6 ) " ) inform%status
-          CALL LSRT_terminate( data, control, inform ) !delete internal workspace
+          CALL LSRT_terminate( data, control, inform ) !delete internal worksp
           EXIT
         END SELECT
       END DO
@@ -154,7 +154,7 @@
    END DO
 
    DO sig = 1, sig_max
-    DO cond = 1, cond_max 
+    DO cond = 1, cond_max
       WRITE( 45, "( F0.5, ' & ' , F0.0, ' & ' )" )                             &
          sigmae( sig ), one / rhos( cond )
      WRITE( 45, "( 3 ( I4, ' & ',  F5.1, ' & ', I4, ' & ' ) )" )               &

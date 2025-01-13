@@ -85,7 +85,6 @@
       USE GALAHAD_TRANSFER_MATLAB
       USE GALAHAD_BQPB_MATLAB_TYPES
       USE GALAHAD_BQPB_double
-      USE GALAHAD_USERDATA_double
       IMPLICIT NONE
       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
 
@@ -120,8 +119,8 @@
       mwPointer :: x_pr, z_pr, b_stat_pr
       mwPointer :: aux_z_pr, aux_b_stat_pr
 
-      CHARACTER ( len = 80 ) :: output_unit, filename
-      LOGICAL :: filexx, opened, initial_set = .FALSE.
+      CHARACTER ( len = 80 ) :: char_output_unit, filename
+      LOGICAL :: opened, initial_set = .FALSE.
       INTEGER :: iores
 
       CHARACTER ( len = 8 ) :: mode
@@ -138,7 +137,6 @@
       TYPE ( BQPB_control_type ), SAVE :: control
       TYPE ( BQPB_inform_type ), SAVE :: inform
       TYPE ( BQPB_data_type ), SAVE :: data
-      TYPE ( GALAHAD_userdata_type ) :: userdata
 
       mwPointer, ALLOCATABLE :: col_ptr( : )
 
@@ -211,8 +209,8 @@
 !  Open i/o units
 
         IF ( control%error > 0 ) THEN
-          WRITE( output_unit, "( I0 )" ) control%error
-          filename = "output_bqpb." // TRIM( output_unit )
+          WRITE( char_output_unit, "( I0 )" ) control%error
+          filename = "output_bqpb." // TRIM( char_output_unit )
           OPEN( control%error, FILE = filename, FORM = 'FORMATTED',           &
                 STATUS = 'REPLACE', IOSTAT = iores )
         END IF
@@ -220,8 +218,8 @@
         IF ( control%out > 0 ) THEN
           INQUIRE( control%out, OPENED = opened )
           IF ( .NOT. opened ) THEN
-            WRITE( output_unit, "( I0 )" ) control%out
-            filename = "output_bqpb." // TRIM( output_unit )
+            WRITE( char_output_unit, "( I0 )" ) control%out
+            filename = "output_bqpb." // TRIM( char_output_unit )
             OPEN( control%out, FILE = filename, FORM = 'FORMATTED',         &
                   STATUS = 'REPLACE', IOSTAT = iores )
           END IF

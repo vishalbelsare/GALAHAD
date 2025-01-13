@@ -1,10 +1,10 @@
 #  Main body of the installation makefile for the GALAHAD RPD package
 
-#  Nick Gould, for GALAHAD productions 
-#  This version: 2022-02-09
+#  Nick Gould, for GALAHAD productions
+#  This version: 2023-05-11
 
 #  include standard GALAHAD makefile defaults before package-specifics
- 
+
 include $(GALAHAD)/src/makedefs/defaults
 
 #  ===========================================================================
@@ -23,16 +23,28 @@ DEPENDENCIES = make_dummy make_specfile make_sort make_zd11 \
 
 #  other packages that depend on package
 
-DEPENDS = ccqp cqp dqp l1qp lpa lpb
+DEPENDS = cdqp cqp dqp l1qp lpa lpb
 
 #  auxiliary packages that the C interface to the current package depends
 #  on (prepend with make_ciface_)
 
-CDEPENDENCIES =
+CDEPENDENCIES = make_ciface_common make_ciface_lms
 
-#  other C interface packages that depend on current interface package 
+#  other C interface packages that depend on current interface package
 
-CDEPENDS = ccqp cqp dqp l1qp lpa lpb
+CDEPENDS = cqp_ciface dqp_ciface lpa_ciface lpb_ciface
+
+#  auxiliary packages that the python interface to the current package depends
+#  on (prepend with make_pyiface_)
+
+PYDEPENDENCIES = make_pyiface_lms
+
+#  other python interface packages that depend on current interface package
+
+PYDEPENDS = cqp_pyiface dqp_pyiface lpa_pyiface lpb_pyiface
+
+#  auxiliary packages that the C interface to the current package depends
+#  on (prepend with make_ciface_)
 
 #  auxiliary packages that are needed for tests (prepend with make_)
 
@@ -47,11 +59,11 @@ TESTS =
 #  ===========================================================================
 
 #  include standard GALAHAD makefile definitions
- 
+
 include $(GALAHAD)/src/makedefs/definitions
 
 #  include compilation and run instructions
- 
+
 include $(GALAHAD)/src/makedefs/instructions
 
 #  include standard package compilation instructions
@@ -59,6 +71,6 @@ include $(GALAHAD)/src/makedefs/instructions
 include $(GALAHAD)/src/makedefs/compile
 
 #  include required package intermediaries
- 
+
 include $(GALAHAD)/src/makedefs/intermediaries
 

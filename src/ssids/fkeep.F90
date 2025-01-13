@@ -1,3 +1,7 @@
+! THIS VERSION: GALAHAD 5.1 - 2024-11-26 AT 13:10 GMT.
+
+#include "spral_procedures.h"
+
 !> \file
 !> \copyright 2016 The Science and Technology Facilities Council (STFC)
 !> \licence   BSD licence, see LICENCE file for details
@@ -5,17 +9,18 @@
 !> \author    Florent Lopez
 !
 !> \brief Define ssids_fkeep type and associated procedures (CPU version)
-module spral_ssids_fkeep
-   use, intrinsic :: iso_c_binding
+module spral_ssids_fkeep_precision
+   use spral_kinds_precision
    use :: omp_lib
-   use spral_ssids_akeep, only : ssids_akeep
-   use spral_ssids_contrib, only : contrib_type
-   use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform
-   use spral_ssids_subtree, only : numeric_subtree_base
-   use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
+   use spral_ssids_akeep_precision, only : ssids_akeep
+   use spral_ssids_contrib_precision, only : contrib_type
+   use spral_ssids_types_precision
+   use spral_ssids_inform_precision, only : ssids_inform
+   use spral_ssids_subtree_precision, only : numeric_subtree_base
+   use spral_ssids_cpu_subtree_precision, only : cpu_numeric_subtree
 #ifdef PROFILE
-   use spral_ssids_profile, only : profile_begin, profile_end, profile_add_event
+   use spral_ssids_profile_precision, only : profile_begin, profile_end, &
+                                             profile_add_event
 #endif
    implicit none
 
@@ -32,7 +37,7 @@ module spral_ssids_fkeep
    ! Data type for data generated in factorise phase
    !
    type ssids_fkeep
-      real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
+      real(rp_), dimension(:), allocatable :: scaling ! Stores scaling for
          ! each entry (in original matrix order)
       logical :: pos_def ! set to true if user indicates matrix pos. definite
 
@@ -43,8 +48,10 @@ module spral_ssids_fkeep
       type(ssids_inform) :: inform
 
    contains
-      procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
-      procedure, pass(fkeep) :: inner_solve => inner_solve_cpu ! Do actual solve
+      procedure, pass(fkeep) :: inner_factor => inner_factor_cpu 
+        ! Do actual factorization
+      procedure, pass(fkeep) :: inner_solve => inner_solve_cpu 
+        ! Do actual solve
       procedure, pass(fkeep) :: enquire_posdef => enquire_posdef_cpu
       procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
       procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
@@ -54,21 +61,20 @@ module spral_ssids_fkeep
 contains
 
 subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
-  implicit none 
+  implicit none
   type(ssids_akeep), intent(in) :: akeep
   class(ssids_fkeep), target, intent(inout) :: fkeep
-  real(wp), dimension(*), target, intent(in) :: val
+  real(rp_), dimension(*), target, intent(in) :: val
   type(ssids_options), intent(in) :: options
   type(ssids_inform), intent(inout) :: inform
 
-  integer :: i, numa_region, exec_loc, my_loc
-  integer :: total_threads, max_gpus, to_launch, thread_num
-  integer :: nth ! Number of threads within a region
-  integer :: ngpus ! Number of GPUs in a given NUMA region
+  integer(ip_) :: i, numa_region, exec_loc, my_loc
+  integer(ip_) :: total_threads, max_gpus, to_launch, thread_num
+  integer(ip_) :: nth ! Number of threads within a region
+  integer(ip_) :: ngpus ! Number of GPUs in a given NUMA region
   logical :: abort, all_region
   type(contrib_type), dimension(:), allocatable :: child_contrib
   type(ssids_inform), dimension(:), allocatable :: thread_inform
-
 #ifdef PROFILE
   ! Begin profile trace (noop if not enabled)
   call profile_begin(akeep%topology)
@@ -181,9 +187,10 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
 #ifdef PROFILE
      ! At least some all region subtrees exist
-     call profile_add_event("EV_ALL_REGIONS", "Starting processing root subtree", 0)
+     call profile_add_event("EV_ALL_REGIONS", &
+                            "Starting processing root subtree", 0)
 #endif
-     
+
      !$omp parallel num_threads(total_threads) default(shared)
      !$omp single
      do i = 1, akeep%nparts
@@ -229,15 +236,15 @@ end subroutine inner_factor_cpu
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, inform)
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), intent(inout) :: fkeep
-   integer, intent(inout) :: local_job
-   integer, intent(in) :: nrhs
-   integer, intent(in) :: ldx
-   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
+   integer(ip_), intent(inout) :: local_job
+   integer(ip_), intent(in) :: nrhs
+   integer(ip_), intent(in) :: ldx
+   real(rp_), dimension(ldx,nrhs), target, intent(inout) :: x
    type(ssids_inform), intent(inout) :: inform
 
-   integer :: i, r, part
-   integer :: n
-   real(wp), dimension(:,:), allocatable :: x2
+   integer(ip_) :: i, r, part
+   integer(ip_) :: n
+   real(rp_), dimension(:,:), allocatable :: x2
 
    n = akeep%n
 
@@ -322,10 +329,10 @@ end subroutine inner_solve_cpu
 subroutine enquire_posdef_cpu(akeep, fkeep, d)
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), target, intent(in) :: fkeep
-   real(wp), dimension(*), intent(out) :: d
+   real(rp_), dimension(*), intent(out) :: d
 
-   integer :: n
-   integer :: part, sa, en
+   integer(ip_) :: n
+   integer(ip_) :: part, sa, en
 
    n = akeep%n
    ! ensure d is not returned undefined
@@ -341,7 +348,7 @@ subroutine enquire_posdef_cpu(akeep, fkeep, d)
          end select
       end associate
    end do
-   
+
 end subroutine enquire_posdef_cpu
 
 !****************************************************************************
@@ -350,17 +357,17 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), target, intent(in) :: fkeep
    type(ssids_inform), intent(inout) :: inform
-   integer, dimension(akeep%n), optional, intent(out) :: piv_order
+   integer(ip_), dimension(akeep%n), optional, intent(out) :: piv_order
       ! If i is used to index a variable, its position in the pivot sequence
       ! will be placed in piv_order(i), with its sign negative if it is
       ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
-   real(wp), dimension(2,akeep%n), optional, intent(out) :: d ! The diagonal
+   real(rp_), dimension(2,akeep%n), optional, intent(out) :: d ! The diagonal
       ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
-   integer :: part, sa
-   integer :: i, n
-   integer, dimension(:), allocatable :: po
+   integer(ip_) :: part, sa
+   integer(ip_) :: i, n
+   integer(ip_), dimension(:), allocatable :: po
 
    n = akeep%n
    if(present(d)) then
@@ -413,13 +420,13 @@ end subroutine enquire_indef_cpu
 
 ! Alter D values
 subroutine alter_cpu(d, akeep, fkeep)
-   real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
+   real(rp_), dimension(2,*), intent(in) :: d  ! The required diagonal entries
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), target, intent(inout) :: fkeep
 
-   integer :: part
+   integer(ip_) :: part
 
    do part = 1, akeep%nparts
       associate(subtree => fkeep%subtree(1)%ptr)
@@ -435,12 +442,12 @@ end subroutine alter_cpu
 
 subroutine free_fkeep(fkeep, flag)
    class(ssids_fkeep), intent(inout) :: fkeep
-   integer, intent(out) :: flag ! not actually used for cpu version, set to 0
+   integer(ip_), intent(out) :: flag ! not used for cpu version, set to 0
 
-   integer :: i
-   integer :: st
+   integer(ip_) :: i
+   integer(ip_) :: st
 
-   flag = 0 ! Not used for basic SSIDS, just zet to zero
+   flag = 0 ! Not used for basic SSIDS, just set to zero
 
    deallocate(fkeep%scaling, stat=st)
    if(allocated(fkeep%subtree)) then
@@ -455,4 +462,4 @@ subroutine free_fkeep(fkeep, flag)
    endif
 end subroutine free_fkeep
 
-end module spral_ssids_fkeep
+end module spral_ssids_fkeep_precision

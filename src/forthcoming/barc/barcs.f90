@@ -1,7 +1,7 @@
   PROGRAM BARC_test
   USE GALAHAD_BARC_double, only: BARC_projection
   USE GALAHAD_RAND_double
-  IMPLICIT NONE    
+  IMPLICIT NONE
   INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
   INTEGER, PARAMETER :: n = 10000, n_prob = 1
   INTEGER :: i, prob, max_iter, iter
@@ -26,6 +26,6 @@
     max_iter = max( max_iter, iter )
   END DO
   CALL CPU_TIME( te )
-  write(6,"( ' max iter, aver cpu, ', i0, 1X, F5.2 )" ) max_iter,               &
+  WRITE( 6, "( ' max iter, aver cpu, ', i0, 1X, F5.2 )" ) max_iter,            &
     ( te - ts ) / n_prob
   END PROGRAM BARC_test

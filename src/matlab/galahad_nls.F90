@@ -212,7 +212,7 @@
 
 !     INTEGER :: iores, out = 11
       INTEGER :: iores, out = - 1
-      CHARACTER ( len = 80 ) :: output_unit, filename
+      CHARACTER ( len = 80 ) :: char_output_unit, filename
       CHARACTER ( len = 80 ) :: eval_r = REPEAT( ' ', 80 )
       CHARACTER ( len = 80 ) :: eval_j = REPEAT( ' ', 80 )
       CHARACTER ( len = 80 ) :: eval_h = REPEAT( ' ', 80 )
@@ -238,8 +238,8 @@
 !  debugging
 
       IF ( out > 0 ) THEN
-        WRITE( output_unit, "( I0 )" ) out
-        filename = "debug." // TRIM( output_unit )
+        WRITE( char_output_unit, "( I0 )" ) out
+        filename = "debug." // TRIM( char_output_unit )
         OPEN( out, FILE = filename, FORM = 'FORMATTED',                        &
               STATUS = 'REPLACE', IOSTAT = iores )
       END IF
@@ -410,8 +410,8 @@
 !  open i/o units
 
         IF ( control%error > 0 ) THEN
-          WRITE( output_unit, "( I0 )" ) control%error
-          filename = "output_nls." // TRIM( output_unit )
+          WRITE( char_output_unit, "( I0 )" ) control%error
+          filename = "output_nls." // TRIM( char_output_unit )
           OPEN( control%error, FILE = filename, FORM = 'FORMATTED',            &
                 STATUS = 'REPLACE', IOSTAT = iores )
         END IF
@@ -419,8 +419,8 @@
         IF ( control%out > 0 ) THEN
           INQUIRE( control%out, OPENED = opened )
           IF ( .NOT. opened ) THEN
-            WRITE( output_unit, "( I0 )" ) control%out
-            filename = "output_nls." // TRIM( output_unit )
+            WRITE( char_output_unit, "( I0 )" ) control%out
+            filename = "output_nls." // TRIM( char_output_unit )
             OPEN( control%out, FILE = filename, FORM = 'FORMATTED',            &
                   STATUS = 'REPLACE', IOSTAT = iores )
           END IF
@@ -470,7 +470,7 @@
         IF ( w_in /= 0 ) THEN
           nz = INT( mxGetNumberOfElements( w_in ), KIND = int4 )
           IF ( nz < m ) CALL mexErrMsgTxt(                                     &
-            ' length of pattern.w must be at least patter.m' //                &
+            ' length of pattern.w must be at least pattern.m' //               &
             ' on input to galahad_nls' )
 
 !  allocate space for the weights, and assign their values

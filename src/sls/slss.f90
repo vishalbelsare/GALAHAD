@@ -1,4 +1,4 @@
-   PROGRAM SLS_EXAMPLE   !  GALAHAD 4.0 - 2022-01-24 AT 09:40 GMT.
+   PROGRAM SLS_EXAMPLE   !  GALAHAD 4.1 - 2022-11-27 AT 15:15 GMT.
    USE GALAHAD_SLS_double
    IMPLICIT NONE
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
@@ -9,7 +9,7 @@
    INTEGER, PARAMETER :: n = 5
    INTEGER, PARAMETER :: ne = 7
    REAL ( KIND = wp ) :: B( n ), X( n )
-   INTEGER :: i, s
+   INTEGER :: s
 ! allocate and set lower triangle of matrix in co-ordinate form
    CALL SMT_put( matrix%type, 'COORDINATE', s )
    matrix%n = n ; matrix%ne = ne
@@ -21,8 +21,9 @@
 ! problem setup complete
 ! set right-hand side
    B( : n ) = (/ 8.0_wp, 45.0_wp, 31.0_wp, 15.0_wp, 17.0_wp /)
-! specify the solver (in this case sils)
-   CALL SLS_initialize( 'sils', data, control, inform )
+! specify the solver (in this case ssids)
+   CALL SLS_initialize( 'ssids', data, control, inform, check = .TRUE. )
+   WRITE( 6, "( ' solver ', A, ' used' )" ) TRIM( inform%solver )
 ! analyse
    CALL SLS_analyse( matrix, data, control, inform )
    IF ( inform%status < 0 ) THEN

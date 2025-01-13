@@ -9,7 +9,7 @@
    INTEGER, PARAMETER :: n = 5
    INTEGER, PARAMETER :: ne = 7
    REAL ( KIND = wp ) :: X( n )
-   INTEGER :: i, s
+   INTEGER :: s
 ! allocate and set lower triangle of matrix in co-ordinate form
    CALL SMT_put( matrix%type, 'COORDINATE', s )
    matrix%n = n ; matrix%ne = ne
@@ -22,7 +22,7 @@
    CALL PSLS_initialize( data, control, inform )
    control%preconditioner = 2  ! band preconditioner
    control%semi_bandwidth = 1  ! semi-bandwidth of one
-   control%definite_linear_solver = 'sils'
+!  control%definite_linear_solver = 'sils'
 ! form and factorize the preconditioner, P
    CALL PSLS_form_and_factorize( matrix, data, control, inform )
    IF ( inform%status < 0 ) THEN
@@ -35,11 +35,12 @@
    CALL PSLS_apply( X, data, control, inform )
    IF ( inform%status == 0 ) THEN
      WRITE( 6, "( ' PSLS - Preconditioned solution is ', 5F6.2 )" ) X
-   ELSE 
+   ELSE
      WRITE( 6, "( ' PSLS - exit status = ', I0 )" ) inform%status
    END IF
 ! clean up
    CALL PSLS_terminate( data, control, inform )
    DEALLOCATE( matrix%type, matrix%val, matrix%row, matrix%col )
    STOP
+
    END PROGRAM PSLS_EXAMPLE

@@ -1,7 +1,7 @@
 #  Main body of the installation makefile for the GALAHAD LCF package
 
 #  Nick Gould, for GALAHAD productions 
-#  This version: 2021-05-27
+#  This version: 2023-08-08
 
 #  include standard GALAHAD makefile defaults before package-specifics
  
@@ -18,10 +18,7 @@ PACKAGE = LCF
 
 #  auxiliary packages that current package depends on (prepend with make_)
 
-DEPENDENCIES = make_sbls_deps make_sbls make_lms make_rand \
-               make_gltr make_lpqp make_fdc make_fit \
-               make_qpp make_trans make_scale make_scu \
-               make_ir make_mop make_cro make_presolve make_qpd
+DEPENDENCIES = make_qpd_deps make_qpd
 
 #  other packages that depend on package
 
@@ -29,7 +26,7 @@ DEPENDS =
 
 #  auxiliary packages that are needed for tests (prepend with make_)
 
-TESTDEPS = make_scaling
+TESTDEPS =
 
 #  tests to be performed (preprend with test_)
 

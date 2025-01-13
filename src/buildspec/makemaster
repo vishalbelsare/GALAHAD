@@ -1,13 +1,13 @@
 #  Main body of the installation makefile for the GALAHAD BUILDSPEC package
 
-#  Nick Gould, for GALAHAD productions 
-#  This version: 2021-05-07
+#  Nick Gould, for GALAHAD productions
+#  This version: 2024-01-13
 
 #  include standard GALAHAD makefile definitions
- 
+
 include $(GALAHAD)/src/makedefs/definitions
 
-#  compilations
+#  compilation agenda
 
 all: buildspec
 
@@ -17,12 +17,12 @@ buildspec_silent: $(OBJ)/buildspec
 buildspec: $(OBJ)/buildspec
 	@printf ' %-21s\n' "GALAHAD: buildspec package ($(PRECIS) $(SUCC)"
 
-$(OBJ)/buildspec: ../buildspec/buildspec.f90
+$(OBJ)/buildspec: ../buildspec/buildspec.F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "buildspec  "
-	$(SED) -f $(SEDS) ../buildspec/buildspec.f90 > $(OBJ)/buildspec.f90
-	cd $(OBJ) ; $(FORTRAN) -o buildspec $(RUNFFLAGS) buildspec.f90 \
-          -lgalahad -L$(OBJ)
-	rm $(OBJ)/*.f90
+	$(CP) ../buildspec/buildspec.F90 $(OBJ)/buildspec.F90
+	cd $(OBJ) ; $(FORTRAN) -o buildspec $(RUNFFLAGS) buildspec.F90 \
+          -lgalahad -L$(OBJ) $(DPREC) -I $(GALAHAD)/include
+	rm $(OBJ)/*.F90
 	@printf '[ OK ]\n'
 
 #  book keeping
@@ -36,6 +36,5 @@ clean:
 cleanall:
 	@printf ' %-14s\t\t' \
           "Removing all $(PRECIS) precision object and module files"
-	$(RM) $(OBJ)/* $(MOD)/*
+	$(RM) -r $(OBJ)/* $(MOD)/*
 	@printf '[ OK ]\n'
-

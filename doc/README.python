@@ -1,0 +1,62 @@
+   ============================
+   PYTHON interfaces to GALAHAD
+   ============================
+
+   ----------------------------------
+   N.B. ONLY TESTED WITH gcc/gfortran
+   ----------------------------------
+
+0. Add suitable PYVERSION, PYTHONINCLUDE, NUMPYINCLUDE,
+   SOABI and PYSITEPACKDIR variables in each architecture 
+   file (architecture), i.e. the names of files in $GALAHAD/makefiles
+
+    PYTHONVERSION = x.yy where x is the main version (usually 3) and yy 
+                      is the latest subversion (currently 10)
+    PYTHONINCLUDE = location of python include files, often
+                      /usr/include/python$(PYTHONVERSION)
+    NUMPYINCLUDE  = location of numpy package inclues, often
+                      /usr/lib/python3/dist-packages/numpy/core/include
+    SOABI         = SOABI/extension suffix, for example
+                      cpython-310-x86_64-linux-gnu (Linux), or
+                      cpython-310m-darwin (OSX).
+                    This may be found by issuing the commands
+                       import sysconfig
+                       print(sysconfig.get_config_var('SOABI')
+                    in python3
+    PYSITEPACKDIR = location of local python site packages, often
+                       ~/.local/lib/python$(PYTHONVERSION)/site-packages
+
+   These variables are found and set automatically during the install 
+   (if python 3 is present), but may be changed afterwards by editing the 
+   file $GALAHAD/makefiles/(architecture)
+
+1. Build fortran and C libraries as normal
+
+     make -s -f $GALAHAD/makefiles/(architecture) all_ciface
+
+    from $GALAHAD/src
+
+2. Now build the Python interfaces
+
+     make -s -f $GALAHAD/makefiles/(architecture) all_pyiface
+
+3. Optionally, run simple tests to see if everything is ok
+
+     make -s -f $GALAHAD/makefiles/(architecture) test_all_pyiface
+
+   This may be done on a package-by-package basis, for example
+
+     cd $GALAHAD/src/(package)
+     make -s -f $GALAHAD/makefiles/(architecture) test_pyiface
+    
+   for the package (package)
+
+4. Documentation is available online via
+
+     https://ralna.github.io/galahad_docs/html/Python
+
+-----------------------------
+
+Nick Gould
+For GALAHAD productions
+This version 10th January 2024

@@ -1,11 +1,11 @@
-#  Main body of the installation makefile for the GALAHAD CUTEST_FUNCTIONS 
+#  Main body of the installation makefile for the GALAHAD CUTEST_FUNCTIONS
 #  package
 
-#  Nick Gould, for GALAHAD productions 
-#  This version: 2021-05-28
+#  Nick Gould, for GALAHAD productions
+#  This version: 2024-11-13
 
 #  include standard GALAHAD makefile defaults before package-specifics
- 
+
 include $(GALAHAD)/src/makedefs/defaults
 
 #  ===========================================================================
@@ -39,18 +39,17 @@ TESTS =
 #  ===========================================================================
 
 #  include standard GALAHAD makefile definitions
- 
+
 include $(GALAHAD)/src/makedefs/definitions
 
 #  compilation agenda for package
 
-S$(PACKAGE) = $(DEPENDENCIES) $(PRLGS)($(package).o)
-D$(PACKAGE) = $(DEPENDENCIES) $(PRLGD)($(package).o)
-
-#  compilation and run agenda
-
-$(PACKAGE)OBJECTSS = $(S$(PACKAGE))
-$(PACKAGE)OBJECTSD = $(D$(PACKAGE))
+$(PACKAGE)OBJECTSS = $(DEPENDENCIES) $(CULGS)($(package).o)
+$(PACKAGE)OBJECTSD = $(DEPENDENCIES) $(CULGD)($(package).o)
+$(PACKAGE)OBJECTSQ = $(DEPENDENCIES) $(CULGQ)($(package).o)
+$(PACKAGE)OBJECTSS64 = $(DEPENDENCIES) $(CULGS64)($(package).o)
+$(PACKAGE)OBJECTSD64 = $(DEPENDENCIES) $(CULGD64)($(package).o)
+$(PACKAGE)OBJECTSQ64 = $(DEPENDENCIES) $(CULQD64)($(package).o)
 
 #  =========================================================================
 #  ========================== makefile stanza ==============================
@@ -61,30 +60,41 @@ $(PACKAGE)OBJECTSD = $(D$(PACKAGE))
 $(package)_silent: $(package)_silent_$(PRECIS)
 $(package)_silent_single: $($(PACKAGE)OBJECTSS)
 $(package)_silent_double: $($(PACKAGE)OBJECTSD)
+$(package)_silent_quadruple: $($(PACKAGE)OBJECTSQ)
+$(package)_silent_single_64: $($(PACKAGE)OBJECTSS64)
+$(package)_silent_double_64: $($(PACKAGE)OBJECTSD64)
+$(package)_silent_quadruple_64: $($(PACKAGE)OBJECTSQ64)
 
 #  package
 
 $(package): $(package)_$(PRECIS)
 	@printf ' %-21s\n' "GALAHAD: $(PACKAGE) ($(PRECIS) $(SUCC)"
 $(package)_single: $($(PACKAGE)OBJECTSS)
-	$(RANLIB) $(PRLGS)
+	$(RANLIB) $(CULGS)
 $(package)_double: $($(PACKAGE)OBJECTSD)
-	$(RANLIB) $(PRLGD)
+	$(RANLIB) $(CULGD)
+$(package)_quadruple: $($(PACKAGE)OBJECTSQ)
+	$(RANLIB) $(CULGQ)
+$(package)_single_64: $($(PACKAGE)OBJECTSS64)
+	$(RANLIB) $(CULGS64)
+$(package)_double_64: $($(PACKAGE)OBJECTSD64)
+	$(RANLIB) $(CULGD64)
+$(package)_quadruple_64: $($(PACKAGE)OBJECTS!64)
+	$(RANLIB) $(CULGQ64)
 
 #  non-standard package compilation instructions
 
-$(package).o: $(PRLG)($(package).o)
+$(package).o: $(CULG)($(package).o)
 
-$(PRLG)($(package).o): ../$(package)/$(package).f90
+$(CULG)($(package).o): ../$(package)/$(package).F90
 	@printf ' %-9s %-15s\t\t' "Compiling" "$(package)   "
-	$(SED) -f $(SEDS) ../$(package)/$(package).f90 > \
-          $(OBJ)/$(package)1.f90
-	$(SED) -f $(LSEDS) $(OBJ)/$(package)1.f90 > $(OBJ)/$(package).f90
-	cd $(OBJ); $(FORTRAN) -o $(package).o $(FFLAGSS) $(package).f90 \
+	$(CP) ../$(package)/$(package).F90 $(OBJ)/$(package).F90
+	cd $(OBJ); $(FORTRAN) -o $(package).o $(FFLAGSS) \
+                -I $(CUTEST)/include $(package).F90 \
               || ( printf ' %-26s' "=> Disabling optimization " ; \
-              $(FORTRAN) -o $(package).o $(FFLAGSN) $(package).f90 )
-	cd $(OBJ); $(PRARR) $(package).o ; $(RM) $(package).f90 \
-          $(package)1.f90 $(package).o
+              $(FORTRAN) -o $(package).o $(FFLAGSN) \
+                -I $(CUTEST)/include $(package).F90 )
+	cd $(OBJ); $(CUARR) $(package).o ; $(RM) $(package).F90 $(package).o
 	$(RMARFILES) $(DEPENDS)
 	@printf '[ OK ]\n'
 
@@ -98,9 +108,9 @@ clean:
 cleanall:
 	@printf ' %-14s\t\t' \
           "Removing all $(PRECIS) precision object and module files"
-	$(RM) $(OBJ)/* $(MOD)/*
+	$(RM) -r $(OBJ)/* $(MOD)/*
 	@printf '[ OK ]\n'
 
 #  include required package intermediaries
- 
+
 include $(GALAHAD)/src/makedefs/intermediaries

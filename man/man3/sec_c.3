@@ -1,14 +1,18 @@
-.TH "sec.h" 3 "Sun Mar 20 2022" "C interfaces to GALAHAD SEC" \" -*- nroff -*-
+.TH "galahad_sec.h" 3 "Thu Jun 22 2023" "C interfaces to GALAHAD SEC" \" -*- nroff -*-
 .ad l
 .nh
 .SH NAME
-sec.h
+galahad_sec.h
 .SH SYNOPSIS
 .br
 .PP
 \fC#include <stdbool\&.h>\fP
 .br
+\fC#include <stdint\&.h>\fP
+.br
 \fC#include 'galahad_precision\&.h'\fP
+.br
+\fC#include 'galahad_cfunctions\&.h'\fP
 .br
 
 .SS "Data Structures"
@@ -21,19 +25,34 @@ sec.h
 .RI "struct \fBsec_inform_type\fP"
 .br
 .in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBsec_initialize\fP (struct \fBsec_control_type\fP *control, int *status)"
+.br
+.ti -1c
+.RI "void \fBsec_information\fP (void **data, struct \fBsec_inform_type\fP *inform, int *status)"
+.br
+.ti -1c
+.RI "void \fBsec_terminate\fP (void **data, struct \fBsec_control_type\fP *control, struct \fBsec_inform_type\fP *inform)"
+.br
+.in -1c
 .SH "Detailed Description"
 .PP 
 
 .SH "Introduction"
 .PP
 .SS "Purpose"
-Build and update dense BFGS and SR1 secant approximations to a Hessian\&.
+Build and update dense BFGS and SR1 secant approximations to a Hessian\&. so that the approximation B satisfies the secant condition B s = y for given vectors s and y\&.
 .PP
 Currently, only the control and inform parameters are exposed; these are provided and used by other GALAHAD packages with C interfaces\&.
 .SS "Authors"
 N\&. I\&. M\&. Gould, STFC-Rutherford Appleton Laboratory, England\&.
 .PP
 C interface, additionally J\&. Fowkes, STFC-Rutherford Appleton Laboratory\&.
+.PP
+Julia interface, additionally A\&. Montoison and D\&. Orban, Polytechnique Montréal\&.
 .SS "Originally released"
 May 2008, C interface January 2022\&. 
 .SH "Data Structure Documentation"
@@ -59,7 +78,7 @@ int \fIprint_level\fP the level of output required\&. <= 0 gives no output, >= 1
 real_wp_ \fIh_initial\fP the initial Hessian approximation will be h_initial * I 
 .br
 .PP
-real_wp_ \fIupdate_skip_tol\fP an update is skipped if the resulting matrix would have grown too much 
+real_wp_ \fIupdate_skip_tol\fP an update is skipped if the resulting matrix would have grown too much; specifically it is skipped when y^T s / y^T y <= update_skip_tol\&. 
 .br
 .PP
 char \fIprefix[31]\fP all output lines will be prefixed by \&.prefix(2:LEN(TRIM(\&.prefix))-1) where \&.prefix contains the required string enclosed in quotes, e\&.g\&. 'string' or 'string' 
@@ -86,6 +105,55 @@ int \fIstatus\fP return status\&. Possible valuesa are:
 .PP
 .RE
 .PP
+.SH "Function Documentation"
+.PP 
+.SS "void sec_initialize (struct \fBsec_control_type\fP * control, int * status)"
+Set default control values and initialize private data
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontrol\fP is a struct containing control information (see \fBsec_control_type\fP)
+.br
+\fIstatus\fP is a scalar variable of type int, that gives the exit status from the package\&. Possible values are (currently): 
+.PD 0
+
+.IP "\(bu" 2
+0\&. The initialization was succesful\&. 
+.PP
+.RE
+.PP
+
+.SS "void sec_information (void ** data, struct \fBsec_inform_type\fP * inform, int * status)"
+Provides output information
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIinform\fP is a struct containing output information (see \fBsec_inform_type\fP)
+.br
+\fIstatus\fP is a scalar variable of type int, that gives the exit status from the package\&. Possible values are (currently): 
+.PD 0
+
+.IP "\(bu" 2
+0\&. The values were recorded succesfully 
+.PP
+.RE
+.PP
+
+.SS "void sec_terminate (void ** data, struct \fBsec_control_type\fP * control, struct \fBsec_inform_type\fP * inform)"
+Deallocate all internal private storage
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIcontrol\fP is a struct containing control information (see \fBsec_control_type\fP)
+.br
+\fIinform\fP is a struct containing output information (see \fBsec_inform_type\fP) 
+.RE
+.PP
+
 .SH "Author"
 .PP 
 Generated automatically by Doxygen for C interfaces to GALAHAD SEC from the source code\&.

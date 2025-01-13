@@ -42,7 +42,7 @@
 
 \newcommand{\libraryname}{GA\-LA\-H\-AD}
 %\newcommand{\releasename}{GALAHAD Optimization Library version $2.\epsilon$}
-\newcommand{\releasename}{GALAHAD Optimization Library version $4.0$}
+\newcommand{\releasename}{GALAHAD Optimization Library version $5.1$}
 
 \newcommand\@ptsize{}
 \newif\if@restonecol
@@ -667,7 +667,7 @@
 %{\tt http://galahad.rl.ac.uk/galahad-www/cou.html} . \\
 % For any commercial application, a separate license must be signed.}}
 \newcommand{\botl}{{\bf \large All use is subject to the conditions of
-the GNU Lesser General Public License version 3. \\
+a BSD-3-Clause License. \\
 See {\tt http://galahad.rl.ac.uk/galahad-www/cou.html} for full details.}}
 
 \newcommand{\bottr}{\packagename \, (\today) \,\,\,\, \thepage}
@@ -802,6 +802,8 @@ See {\tt http://galahad.rl.ac.uk/galahad-www/cou.html} for full details.}}
                         \resetcounters}
 \newcommand{\galexamples}{\section{EXAMPLES OF USE\label{galexample}}
                         \resetcounters}
+\newcommand{\galappendix}{\section{APPENDIX\label{galappendix}}
+                        \resetcounters}
 
 % subsection names
 
@@ -811,6 +813,7 @@ See {\tt http://galahad.rl.ac.uk/galahad-www/cou.html} for full details.}}
 \newcommand{\galtype}{\subsection{The derived data type\label{galtype}}}
 \newcommand{\galtypes}{\subsection{The derived data types\label{galtypes}}}
 \newcommand{\galopenmp}{\subsection{OpenMP}}\label{galopenmp}
+\newcommand{\galkinds}{\subsection{Real and integer kinds}}\label{galkinds}
 \newcommand{\galintkinds}{\subsection{Integer kinds}}\label{galintkinds}
 \newcommand{\galarguments}{\subsection{Argument lists and calling sequences\label{galarguments}}}
 \newcommand{\galreverse}{\subsection{Reverse communication\label{galreverse}}}
@@ -848,14 +851,16 @@ See {\tt http://galahad.rl.ac.uk/galahad-www/cou.html} for full details.}}
 % data types
 
 \newcommand{\present}{{\tt PRESENT}}
-\newcommand{\integer}{{\tt INTEGER}}
+%\newcommand{\integer}{{\tt INTEGER}}
+\newcommand{\integer}{{\tt INTEGER(ip\_)}}
 \newcommand{\shortinteger}{{\tt INTEGER(short)}}
-\newcommand{\longinteger}{{\tt INTEGER(long)}}
+\newcommand{\longinteger}{{\tt INTEGER(int64)}}
 \newcommand{\logical}{{\tt LOGICAL}}
 \newcommand{\character}{{\tt CHARACTER}}
 \newcommand{\real}{{\tt REAL}}
-\newcommand{\realdp}{{\tt REAL} (double precision
- in {\tt \fullpackagename\-\_\-double})}
+\newcommand{\realdp}{{\tt REAL(rp\_)}}
+%\newcommand{\realdp}{{\tt REAL} (double precision
+% in {\tt \fullpackagename\-\_\-double})}
 \newcommand{\complex}{{\tt COMPLEX}}
 \newcommand{\complexdp}{{\tt COMPLEX} (double precision complex
  in {\tt \fullpackagename\_\-double})}
@@ -1034,6 +1039,37 @@ See {\tt http://galahad.rl.ac.uk/galahad-www/cou.html} for full details.}}
 \newcommand{\galerralive}{-82}
 \newcommand{\galerrunknownstorage}{-90}
 \newcommand{\galerrmaxstorage}{-91}
+\newcommand{\galbudgetexhausted}{-99}
+
+\newcommand{\galsymsilent}{0}
+\newcommand{\galsymtrace}{1}
+\newcommand{\galsymaction}{2}
+\newcommand{\galsymdetails}{3}
+\newcommand{\galsymdebug}{4}
+\newcommand{\galsymcrazy}{5}
+\newcommand{\galsymreducedsize}{1}
+\newcommand{\galsymfullpresolve}{2}
+\newcommand{\galsymforcetozero}{0}
+\newcommand{\galsymleaveasis}{1}
+\newcommand{\galsymtightest}{0}
+\newcommand{\galsymnondegenerate}{1}
+\newcommand{\galsymloosest}{2}
+\newcommand{\galsyminactive}{-2}
+\newcommand{\galsymstructural}{-1}
+\newcommand{\galsymeliminated}{0}
+\newcommand{\galsymactive}{1}
+\newcommand{\galsymfixed}{2}
+\newcommand{\galsymrange}{3}
+\newcommand{\galsymupper}{4}
+\newcommand{\galsymlower}{5}
+\newcommand{\galsymfree}{6}
+\newcommand{\galsymkeep}{0}
+\newcommand{\galsymdelete}{1}
+\newcommand{\galsympositive}{1}
+\newcommand{\galsymnegative}{-1}
+\newcommand{\galsymnone}{0}
+\newcommand{\galsymbasic}{1}
+\newcommand{\galsymsevere}{2}
 
 \endinput
 

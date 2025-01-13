@@ -9,7 +9,8 @@ blls        | ok     | cound-constrained linear least-squares
 bqp         | ok     | bound-constrained QP, proconditioned projected gradients
 bqpb        | ok     | bound-constrained QP, interior point
 bsc         | ok     | assemble the Schur complement
-ccqp        | beta   | QP, crossover interior-point to dual gradient prohection
+ccqp        | beta   | QP, crossover interior-point to lunge
+cdqp        | beta   | QP, crossover interior-point to dual gradient prohection
 check       | ok     | check derivatives
 clock       | ok     | record system clock times
 convert     | beta   | convert between sparse-matrix formats
@@ -40,6 +41,7 @@ lanc        | alpha  | improved LANCELOT
 lapack      | ok     | required LAPACK/BLAS (no doc)
 lhs         | beta   | Latin Hypercube samples
 lls         | beta   | trust-region constrained linear-least squares via PCG
+llsr        | ok     | regularized linear least-squares via sbls
 llst        | ok     | trust-region regularized linear least-squares via sbls
 lms         | ok     | limited-memory Hessian approximation
 lmsc        | alpha  | limited-memory Hessian approximation with constraints
@@ -99,7 +101,7 @@ warm        | beta   | test warmstart capabilities
 wcp         | ok     | find a 'well-centred' point in a polyhedron
 zd11        | ok     | HSL archive sparse-matrix structure
 
-non-free packages lie in non-free/
+External packages lie in external/
 
 ad02        | stub   | HSL archive automatic differentiation
 icfs        | stub   | Lin-More' incomplete factorization
@@ -119,10 +121,11 @@ mc61        | stub   | HSL profile/bandwidth reduction
 mc64        | stub   | HSL reordering for large diagonals
 mc68        | stub   | HSL sparse reorderings
 mc77        | stub   | HSL diagonal scaling
-minpack     | stub   | MINPACK
 mi20        | stub   | HSL algebraic multigrid
 mi28        | stub   | HSL incomplete Cholesky factorization
-mkl         | stub   | ISML MKL
+mumps       | stub   | MUMPS sparse matrix package
+mpi         | stub   | MPI interface
+pastix      | stub   | Pastix sparse matrix package
 pardiso     | stub   | Pardiso sparse matrix package
 wsmp        | stub   | WSMP sparse matrix package
 

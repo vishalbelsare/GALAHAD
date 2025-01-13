@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# script to create a single GALAHAD shared library from static ones
+
+# syntax: create_one_shared
+
+# using shell variables
+
+#   CC           is the c compiler used, e.g, gcc
+#   FORTRAN      is the fortran compiler, e.g., gfortran
+#   OPTIMIZATION is the appropriate optimization flag, e.g., -O
+#   SHARED       is the appropriate flag to produce a shared (dynamic)
+#                library, e.g., -shared
+#   DLEXT        is the suffix for shared libraries, e.g. so (Linux),
+#                dylib (OSX), dll (Windows)
+#   LOADALL      is the loader option to include every item in the archive,
+#                e.g. -Wl,--whole-archive (Linux), -Wl,-all_load (OSX)
+#   LOADNONE     is the loader option to not include subsequent items in the
+#                archive, e.g., -Wl,--no-whole-archive (Linux),
+#                -Wl,-noall_load (OSX)
+#   NOUNDEFINED  is the loader option to ensure that all symbols are defined
+#                e.g. -Wl,--noundefined (Linux), -Wl,-undefined,error (OSX)
+
+mkdir -p shared
+
+echo " creating single GALAHAD shared library in"
+echo "  $PWD/shared"
+
+STATICLIBS="libgalahad.a libhsl.a libgalahad_spral.a \
+            libgalahad_mkl_pardiso.a libgalahad_pardiso.a libgalahad_wsmp.a \
+            libgalahad_pastix.a libgalahad_mumps.a libgalahad_umfpack.a \
+            libmetis_nodednd.a libgalahad_lapack.a libgalahad_blas.a \
+            libgalahad_cutest_dummy.a libhsl_c.a libgalahad_c.a"
+
+echo " creating libgalahad_all.$DLEXT "
+
+#echo "    $FORTRAN $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+#$LOADALL $STATICLIBS $LOADNONE -lstdc++ -lgomp -lhwloc"
+
+$FORTRAN $OPTIMIZATION $SHARED -o shared/libgalahad_all.$DLEXT \
+$NOUNDEFINED $LOADALL $STATICLIBS $LOADNONE \
+-lstdc++ -lgomp -lhwloc

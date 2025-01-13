@@ -1,0 +1,59 @@
+#!/bin/bash -vx
+
+# script to create relevant shared GALAHAD libraries from static ones
+
+# syntax: create_shared
+
+# using shell variables
+
+#   CC           is the c compiler used, e.g, gcc
+#   FORTRAN      is the fortran compiler, e.g., gfortran
+#   OPTIMIZATION is the appropriate optimization flag, e.g., -O
+#   SHARED       is the appropriate flag to produce a shared (dynamic)
+#                library, e.g., -shared
+#   DLEXT        is the suffix for shared libraries, e.g. so (Linux),
+#                dylib (OSX), dll (Windows)
+#   LOADALL      is the loader option to include every item in the archive,
+#                e.g. -Wl,--whole-archive (Linux), -Wl,-all_load (OSX)
+#   LOADNONE     is the loader option to not include subsequent items in the
+#                archive, e.g., -Wl,--no-whole-archive (Linux),
+#                -Wl,-noall_load (OSX)
+
+mkdir -p shared
+
+echo " creating shared GALAHAD libraries in"
+echo "  $PWD/shared"
+
+for name in galahad_py
+do
+  if [ -f "lib$name.a" ]; then
+    echo " creating lib$name.$DLEXT"
+#   $CC $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+#$NOUNDEFINED \
+    $CC $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+$LOADALL lib$name.a $LOADNONE
+  else
+    echo " static library lib$name.a does not exist, shared creation skipped"
+  fi
+done
+
+for name in galahad hsl galahad_spral galahad_mpi \
+            galahad_mkl_pardiso galahad_pardiso galahad_wsmp \
+            galahad_pastix galahad_mumps galahad_umfpack \
+            metis_nodend galahad_lapack galahad_blas \
+            galahad_cutest_dummy hsl_c galahad_c
+do
+  if [ -f "lib$name.a" ]; then
+    echo " creating lib$name.$DLEXT"
+#echo "    $FORTRAN $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+#-Wl,$LOADALL lib$name.a -Wl,$LOADNONE"
+#    $FORTRAN $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+#$NOUNDEFINED $LOADALL lib$name.a $LOADNONE
+#    echo "$FORTRAN $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+#$LOADALL lib$name.a $LOADNONE"
+    $FORTRAN $OPTIMIZATION $SHARED -o shared/lib$name.$DLEXT \
+$LOADALL lib$name.a $LOADNONE
+  else
+    echo " static library lib$name.a does not exist, shared creation skipped"
+  fi
+done

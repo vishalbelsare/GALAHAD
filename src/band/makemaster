@@ -1,0 +1,66 @@
+#  Main body of the installation makefile for the GALAHAD BAND package
+
+#  Nick Gould, for GALAHAD productions
+#  This version: 2023-02-09
+
+#  include standard GALAHAD makefile defaults before package-specifics
+
+include $(GALAHAD)/src/makedefs/defaults
+
+#  ===========================================================================
+#  ====================  package-dependent parts  ============================
+#  ===========================================================================
+
+#  package name
+
+package = band
+PACKAGE = BAND
+
+#  auxiliary packages that current package depends on (prepend with make_)
+
+DEPENDENCIES = make_kinds
+
+#  other packages that depend on package
+
+DEPENDS = precn psls filtrane
+
+#  auxiliary packages that the C interface to the current package depends
+#  on (prepend with make_ciface_)
+
+CDEPENDENCIES = make_ciface_common
+
+#  other C interface packages that depend on current interface package
+
+CDEPENDS =
+
+#  auxiliary packages that are needed for tests (prepend with make_)
+
+TESTDEPS =
+
+#  tests to be performed (preprend with test_)
+
+TESTS = test_full
+
+#  CUTEst example for tests
+
+CUTEST_EXAMPLE = QPBAND.SIF
+
+#  ===========================================================================
+#  =================  end of package-dependent parts  ========================
+#  ===========================================================================
+
+#  include standard GALAHAD makefile definitions
+
+include $(GALAHAD)/src/makedefs/definitions
+
+#  include compilation and run instructions
+
+include $(GALAHAD)/src/makedefs/instructions
+
+#  include standard package compilation instructions
+
+include $(GALAHAD)/src/makedefs/compile
+
+#  include required package intermediaries
+
+include $(GALAHAD)/src/makedefs/intermediaries

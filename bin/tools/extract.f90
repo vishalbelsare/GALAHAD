@@ -1,7 +1,7 @@
   PROGRAM extract_types
 
-!  create C interface files package_ciface.f90 and package.h from
-!  date in the package file package.f90
+!  create C interface files package_ciface.F90 and package.h from
+!  date in the package file package.F90
 
   INTEGER, DIMENSION( 100 ) :: control_clen
   INTEGER, DIMENSION( 100 ) :: inform_clen
@@ -74,6 +74,7 @@
   LOGICAL :: control_type = .FALSE.
   LOGICAL :: time_type = .FALSE.
   LOGICAL :: inform_type = .FALSE.
+  LOGICAL :: debug = .TRUE.
 
 !  read package name
 
@@ -82,18 +83,18 @@
   WRITE( out, "( ' package ', A, ' selected ' )" ) TRIM( package )
   len_name = LEN_TRIM( package )
   DO i = 1, len_name
-    st1 = package( i : i ) 
+    st1 = package( i : i )
     CALL STRING_lower_scalar( st1 )
     package_lower( i : i ) = st1
     CALL STRING_upper_scalar( st1 )
     package_upper( i : i ) = st1
   END DO
 ! WRITE( out, "( ' lower and upper case package names are ', A, ' & ', A )" )  &
-!    TRIM( package_lower ), TRIM( package_upper )  
+!    TRIM( package_lower ), TRIM( package_upper )
 
 !  check that package.f90 exists
 
-  package_f90 = TRIM( package_lower ) // '.f90'
+  package_f90 = TRIM( package_lower ) // '.F90'
   INQUIRE( FILE = package_f90, EXIST = file_exists )
   IF ( file_exists ) THEN
 !   WRITE( out, "( ' package file ', A, ' exists' )" ) TRIM( package_f90 )
@@ -102,7 +103,7 @@
     WRITE( out, "( ' package file ', A, ' does not exist. Stopping' )" )       &
       TRIM( package_f90 )
     STOP
-  END IF 
+  END IF
 
   CALL DATE_AND_TIME( date, time )
   day = date( 7 : 8 ) ;  month = date( 5 : 6 ) ;  year = date( 1 : 4 )
@@ -110,7 +111,7 @@
   READ( month, "( I2 )" ) imonth
   READ( day, "( I2 )" ) iday
 
-!  set up and initialize the C header file, along with an associated 
+!  set up and initialize the C header file, along with an associated
 !  scratch file
 
   package_h = TRIM( package_lower ) // '.h'
@@ -196,15 +197,16 @@
  &  '', /, &
  &  '// precision', /, &
  &  '#include ""galahad_precision.h""' &
+ &  '#include ""galahad_cfunctions.h""' &
  &   )" ) TRIM( package_lower ), TRIM( package_lower ), TRIM( package_lower ), &
           TRIM( package_lower ), TRIM( package_lower ), TRIM( package_lower ), &
           TRIM( package_lower ), TRIM( package_lower ), TRIM( package_lower ), &
           TRIM( package_upper ), TRIM( package_upper )
 
-!  set up and initialize the C interface file, along with an associated 
+!  set up and initialize the C interface file, along with an associated
 !  scratch file
 
-  package_ciface = TRIM( package_lower ) // '_ciface.f90'
+  package_ciface = TRIM( package_lower ) // '_ciface.F90'
   INQUIRE( FILE = package_ciface, EXIST = file_exists )
   IF ( file_exists ) THEN
     OPEN( UNIT = ciface_unit, FILE = package_ciface, FORM = 'FORMATTED',       &
@@ -236,8 +238,11 @@
  &  A2, ':', A2, ' GMT.' )" ) year, month, day, hour, minute
   WRITE( ciface_unit, "(                                                       &
  &  '', /, &
+ &  '#include ""galahad_modules.h""', /, &
+ &  '#include ""galahad_cfunctions.h""', /, &
+ &  '', /, &
  &  '!-*-*-*-*-*-*-*-  G A L A H A D _ ', 10( 1X, A1 ) )", ADVANCE = 'NO' )    &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
   WRITE( ciface_unit, "(                                                       &
  &  '   C   I N T E R F A C E  -*-*-*-*-*-', /, &
  &  '', /, &
@@ -253,7 +258,7 @@
  &  '!  For full documentation, see', /, &
  &  '!   http://galahad.rl.ac.uk/galahad-www/specs.html', /, &
  &  '', /, &
- &  '  MODULE GALAHAD_', A, '_double_ciface', /, &
+ &  '  MODULE GALAHAD_', A, '_precision_ciface', /, &
  &  '    USE iso_c_binding', /, &
  &  '    USE GALAHAD_common_ciface' &
  &   )" ) TRIM( package_upper )
@@ -270,7 +275,7 @@
       line( i : i ) = ' '
     END DO
     line = ADJUSTL( line )
-!   WRITE( out, * ) TRIM( line )
+    IF ( debug ) WRITE( out, * ) TRIM( line )
 
 !  control section
 
@@ -311,7 +316,7 @@
      &  '    /// \brief', /, &
      &  '    /// use C or Fortran sparse matrix indexing', /, &
      &  '    bool f_indexing;' &
-   & )" )  
+   & )" )
       WRITE( ciface_scratch,                                                   &
         "( '      LOGICAL ( KIND = C_BOOL ) :: f_indexing' )" )
     END IF
@@ -331,6 +336,7 @@
         CYCLE
       END IF
       line = ADJUSTL( line )
+      IF ( debug ) WRITE( out, * ) TRIM( line )
       IF ( line( 1 : 8 ) == 'END TYPE' ) THEN
         WRITE(  h_scratch, "( '};' )" )
         WRITE(  ciface_scratch, "( '    END TYPE ', A, '_', A, '_type' )" )    &
@@ -379,7 +385,7 @@
 
 ! check to see if the component is an array
 
-        CALL contains_dimension( line, past ) 
+        CALL contains_dimension( line, past )
         IF ( past > 0 ) THEN ! if so, find its dimension
           READ( line( past : 80 ), * ) dim
         END IF
@@ -395,13 +401,13 @@
 
 !  determine the kind of component
 
-        IF ( line( 1 : 7 ) == 'INTEGER' ) THEN
+        IF ( line( 1 : 22 ) == 'INTEGER ( KIND = ip_ )' ) THEN
           c = 'i'
-        ELSE IF ( line( 1 : 18 ) == 'REAL ( KIND = wp )' ) THEN
+        ELSE IF ( line( 1 : 19 ) == 'REAL ( KIND = rp_ )' ) THEN
           c = 'r'
-        ELSE IF ( line( 1 : 18 ) == 'REAL ( KIND = dp )' ) THEN
+        ELSE IF ( line( 1 : 19 ) == 'REAL ( KIND = dp_ )' ) THEN
           c = 'r'
-        ELSE IF ( line( 1 : 18 ) == 'REAL ( KIND = sp )' ) THEN
+        ELSE IF ( line( 1 : 19 ) == 'REAL ( KIND = sp_ )' ) THEN
           c = 's'
         ELSE IF ( line( 1 : 4 ) == 'REAL' ) THEN
           c = 's'
@@ -444,9 +450,9 @@
         IF ( first_component ) THEN
           first_component = .FALSE.
           first_line = line
-        ELSE 
+        ELSE
           WRITE( h_scratch, "( '    /// see ', A )" ) TRIM( first_line )
-        END IF 
+        END IF
 
         SELECT CASE( c )
         CASE ( 'i' ) ! integer
@@ -473,7 +479,7 @@
             WRITE( h_scratch, "( '    real_wp_ ', A, ';' )" ) TRIM( line )
           END IF
           WRITE( ciface_scratch,                                               &
-        "( '      REAL ( KIND = wp ) :: ', A )" ) TRIM( line )
+        "( '      REAL ( KIND = rp_ ) :: ', A )" ) TRIM( line )
           nr = nr + 1
           SELECT CASE( TRIM( dtype ) )
           CASE ( 'control' )
@@ -491,7 +497,7 @@
             WRITE( h_scratch, "( '    real_sp_ ', A, ';' )" ) TRIM( line )
           END IF
           WRITE( ciface_scratch,                                               &
-        "( '      REAL ( KIND = sp ) :: ', A )" ) TRIM( line )
+        "( '      REAL ( KIND = sp_ ) :: ', A )" ) TRIM( line )
           ns = ns + 1
           SELECT CASE( TRIM( dtype ) )
           CASE ( 'control' )
@@ -550,7 +556,7 @@
           END IF
           len_tname = LEN_TRIM( line )
           DO i = 1, len_tname
-            st1 = line( i : i ) 
+            st1 = line( i : i )
             CALL STRING_lower_scalar( st1 )
             line_lower( i : i ) = st1
           END DO
@@ -591,16 +597,16 @@
     DO l = 1, ndeps
       len_dname = LEN_TRIM( depends( l ) )
       DO i = 1, len_dname
-        st1 = depends( l )( i : i ) 
+        st1 = depends( l )( i : i )
         CALL STRING_lower_scalar( st1 )
         depends_lower( i : i ) = st1
       END DO
-      WRITE( h_unit, "( '#include ""', A, '.h""' )" )                          &
+      WRITE( h_unit, "( '#include ""galahad_', A, '.h""' )" )                  &
          depends_lower( 1 : len_dname )
     END DO
   END IF
 
-  WRITE( ciface_unit, "( '    USE GALAHAD_', A, '_double, ONLY: &' )" )        &
+  WRITE( ciface_unit, "( '    USE GALAHAD_', A, '_precision, ONLY: &' )" )     &
     TRIM( package_upper )
   IF ( control_type )                                                          &
     WRITE( ciface_unit, "( '        f_', A, '_control_type => ', A,            &
@@ -630,14 +636,14 @@
   DO l = 1, ndeps
     len_dname = LEN_TRIM( depends( l ) )
     DO i = 1, len_dname
-      st1 = depends( l )( i : i ) 
+      st1 = depends( l )( i : i )
       CALL STRING_lower_scalar( st1 )
       depends_lower( i : i ) = st1
       CALL STRING_upper_scalar( st1 )
       depends_upper( i : i ) = st1
     END DO
     WRITE( ciface_unit, "( '', /,                                              &
-   &  '    USE GALAHAD_', A, '_double_ciface, ONLY: &', /, &
+   &  '    USE GALAHAD_', A, '_precision_ciface, ONLY: &', /, &
    &  '        ', A, '_inform_type, &', /, &
    &  '        ', A, '_control_type, &', /, &
    &  '        copy_', A, '_inform_in => copy_inform_in, &' , /, &
@@ -652,13 +658,6 @@
 
   WRITE( ciface_unit, "( '', /,                                                &
  &  '    IMPLICIT NONE', /, &
- &  '', /, &
- &  '!--------------------', /, &
- &  '!   P r e c i s i o n', /, &
- &  '!--------------------', /, &
- &  '', /, &
- &  '    INTEGER, PARAMETER :: wp = C_DOUBLE ! double precision', /, &
- &  '    INTEGER, PARAMETER :: sp = C_FLOAT  ! single precision', /, &
  &  '', /, &
  &  '!-------------------------------------------------', /, &
  &  '!  D e r i v e d   t y p e   d e f i n i t i o n s', /, &
@@ -687,7 +686,7 @@
   WRITE( h_unit, "(                                                            &
  & '', /,  &
  &  '// *-*-*-*-*-*-*-*-*-*-   ', 10( 1X, A1 ) )", ADVANCE = 'NO' )            &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
 
   WRITE( h_unit, "(                                                            &
  & ' _ I N I T I A L I Z E    -*-*-*-*-*-*-*-*-*', /, &
@@ -713,7 +712,7 @@
   WRITE( h_unit, "(                                                            &
  & '', /, &
  &  '// *-*-*-*-*-*-*-*-*-   ', 10( 1X, A1 ) )", ADVANCE = 'NO' )              &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
 
   WRITE( h_unit, "(                                                            &
  & ' _ R E A D _ S P E C F I L E   -*-*-*-*-*-*-*', /, &
@@ -722,11 +721,11 @@
  & '                        const char specfile[] );', /, &
  & '', /, &
  &  '/*!<', /, &
- &  '  Read the content of a specification file, and assign values', &   
+ &  '  Read the content of a specification file, and assign values', &
  &  ' associated ', /, &
  &  '  with given keywords to the corresponding control parameters', /, &
  &  '', /, &
- &  '  @param[in,out]  control is a struct containing control', & 
+ &  '  @param[in,out]  control is a struct containing control', &
  &  ' information ', /, &
  &  '              (see ', A, '_control_type)', /, &
  &  '  @param[in]  specfile is a character string containing the name of', /, &
@@ -737,7 +736,7 @@
   WRITE( h_unit, "(                                                            &
  & '', /, &
  &  '// *-*-*-*-*-*-*-*-*-*-*-*-   ', 10( 1X, A1 ) )", ADVANCE = 'NO' )        &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
 
   WRITE( h_unit, "(                                                            &
  & ' _ I M P O R T   -*-*-*-*-*-*-*-*-*-*', /, &
@@ -756,7 +755,7 @@
  &  '', /, &
  &  ' @param[in,out] status is a scalar variable of type int, that gives', /, &
  &  '    the exit status from the package. Possible values are:', /, &
- &  '  \li  1. The import was succesful, and the package is ready for', &    
+ &  '  \li  1. The import was succesful, and the package is ready for', &
  &  ' the solve phase', /, &
  &  '  \li -1. An allocation error occurred. A message indicating the ', /, &
  &  '       offending array is written on unit control.error, and the ', /, &
@@ -769,7 +768,7 @@
  &  '       name of the offending array are held in ', /, &
  &  '       inform.alloc_status and inform.bad_alloc respectively.', /, &
  &  '  \li -3. The restriction n > 0 or requirement that type contains', /, &
- &  '       its relevant string ''dense'', ''coordinate'', ', &     
+ &  '       its relevant string ''dense'', ''coordinate'', ', &
  &  '''sparse_by_rows'',', /, &
  &  '       ''diagonal'' or ''absent'' has been violated.', /, &
  &  '*/'  &
@@ -778,7 +777,7 @@
   WRITE( h_unit, "(                                                            &
  & '', /, &
  & '// *-*-*-*-*-*-*-   ', 10( 1X, A1 ) )", ADVANCE = 'NO' )                   &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
 
   WRITE( h_unit, "(                                                            &
  & ' _ R E S E T _ C O N T R O L   -*-*-*-*-*-*-*', /, &
@@ -797,7 +796,7 @@
  &  '', /, &
  &  ' @param[in,out] status is a scalar variable of type int, that gives', /, &
  &  '    the exit status from the package. Possible values are:', /, &
- &  '  \li  1. The import was succesful, and the package is ready for', &    
+ &  '  \li  1. The import was succesful, and the package is ready for', &
  &  ' the solve phase', /, &
  &  '*/'  &
  & )" ) TRIM( package_lower ), TRIM( package_lower ), TRIM( package_lower )
@@ -805,7 +804,7 @@
   WRITE( h_unit, "(                                                            &
  & '', /, &
  & '// *-*-*-*-*-*-*-*-*-*-   ', 10( 1X, A1 ) )", ADVANCE = 'NO' )             &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
 
   WRITE( h_unit, "(                                                            &
  & ' _ I N F O R M A T I O N   -*-*-*-*-*-*-*-*', /, &
@@ -823,7 +822,7 @@
  &  '              (see ', A, '_inform_type) ', /, &
  &  '', /, &
  &  '  @param[out] status is a scalar variable of type int, that gives', /, &
- &  '              the exit status from the package.', /, & 
+ &  '              the exit status from the package.', /, &
  &  '              Possible values are (currently):', /, &
  &  '  \li  0. The values were recorded succesfully', /, &
  &  '*/' &
@@ -832,7 +831,7 @@
   WRITE( h_unit, "(                                                            &
  & '', /, &
  &  '// *-*-*-*-*-*-*-*-*-*-   ', 10( 1X, A1 ) )", ADVANCE = 'NO' )            &
-   ( package_upper( i : i ), i = 1, len_name )   
+   ( package_upper( i : i ), i = 1, len_name )
 
   WRITE( h_unit, "(                                                            &
  & ' _ T E R M I N A T E   -*-*-*-*-*-*-*-*-*-*', /, &
@@ -904,7 +903,7 @@
         WRITE( ciface_unit, "('    fcontrol%', A, ' = ccontrol%', A )" )       &
           TRIM( control_i( i ) ), TRIM( control_i( i ) )
       END DO
-    END IF  
+    END IF
     IF ( control_nr + control_ns > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Reals' )" )
       DO i = 1, control_nr
@@ -915,20 +914,20 @@
         WRITE( ciface_unit, "('    fcontrol%', A, ' = ccontrol%', A )" )       &
           TRIM( control_s( i ) ), TRIM( control_s( i ) )
       END DO
-    END IF  
+    END IF
     IF ( control_nl > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Logicals' )" )
       DO i = 1, control_nl
         WRITE( ciface_unit, "('    fcontrol%', A, ' = ccontrol%', A )" )       &
           TRIM( control_l( i ) ), TRIM( control_l( i ) )
       END DO
-    END IF  
+    END IF
     IF ( control_nt > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Derived types' )" )
       DO i = 1, control_nt
-        len_name = LEN_TRIM( control_t( i ) ) 
+        len_name = LEN_TRIM( control_t( i ) )
         DO l = 1, len_name
-          st1 = control_t( i )( l : l ) 
+          st1 = control_t( i )( l : l )
           CALL STRING_lower_scalar( st1 )
           depends_lower( l : l ) = st1
         END DO
@@ -937,7 +936,7 @@
           depends_lower( 1 : len_name ), depends_lower( 1 : len_name ),        &
           depends_lower( 1 : len_name )
       END DO
-    END IF  
+    END IF
     IF ( control_nc > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Strings' )" )
       DO i = 1, control_nc
@@ -949,7 +948,7 @@
       & )" ) TRIM( control_c( i ) ), TRIM( control_c( i ) ),                   &
              TRIM( control_c( i ) ), TRIM( control_c( i ) )
       END DO
-    END IF  
+    END IF
     WRITE( ciface_unit, "(                                                     &
  & '    RETURN', /, &
  & '', /, &
@@ -974,7 +973,7 @@
         WRITE( ciface_unit, "('    ccontrol%', A, ' = fcontrol%', A )" )       &
           TRIM( control_i( i ) ), TRIM( control_i( i ) )
       END DO
-    END IF  
+    END IF
     IF ( control_nr + control_ns > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Reals' )" )
       DO i = 1, control_nr
@@ -985,20 +984,20 @@
         WRITE( ciface_unit, "('    ccontrol%', A, ' = fcontrol%', A )" )       &
           TRIM( control_s( i ) ), TRIM( control_s( i ) )
       END DO
-    END IF  
+    END IF
     IF ( control_nl > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Logicals' )" )
       DO i = 1, control_nl
         WRITE( ciface_unit, "('    ccontrol%', A, ' = fcontrol%', A )" )       &
           TRIM( control_l( i ) ), TRIM( control_l( i ) )
       END DO
-    END IF  
+    END IF
     IF ( control_nt > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Derived types' )" )
       DO i = 1, control_nt
-        len_name = LEN_TRIM( control_t( i ) ) 
+        len_name = LEN_TRIM( control_t( i ) )
         DO l = 1, len_name
-          st1 = control_t( i )( l : l ) 
+          st1 = control_t( i )( l : l )
           CALL STRING_lower_scalar( st1 )
           depends_lower( l : l ) = st1
         END DO
@@ -1007,7 +1006,7 @@
           depends_lower( 1 : len_name ), depends_lower( 1 : len_name ),        &
           depends_lower( 1 : len_name )
       END DO
-    END IF  
+    END IF
     IF ( control_nc > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Strings' )" )
       DO i = 1, control_nc
@@ -1020,7 +1019,7 @@
       & )" ) TRIM( control_c( i ) ), TRIM( control_c( i ) ),                   &
              TRIM( control_c( i ) ), TRIM( control_c( i ) )
       END DO
-    END IF  
+    END IF
     WRITE( ciface_unit, "(                                                     &
  & '    RETURN', /, &
  & '', /, &
@@ -1046,7 +1045,7 @@
         WRITE( ciface_unit, "('    ftime%', A, ' = ctime%', A )" )       &
           TRIM( time_s( i ) ), TRIM( time_s( i ) )
       END DO
-    END IF  
+    END IF
     WRITE( ciface_unit, "(                                                     &
  & '    RETURN', /, &
  & '', /, &
@@ -1070,7 +1069,7 @@
         WRITE( ciface_unit, "('    ctime%', A, ' = ftime%', A )" )       &
           TRIM( time_s( i ) ), TRIM( time_s( i ) )
       END DO
-    END IF  
+    END IF
     WRITE( ciface_unit, "(                                                     &
  & '    RETURN', /, &
  & '', /, &
@@ -1093,7 +1092,7 @@
         WRITE( ciface_unit, "('    finform%', A, ' = cinform%', A )" )       &
           TRIM( inform_i( i ) ), TRIM( inform_i( i ) )
       END DO
-    END IF  
+    END IF
     IF ( inform_nr + inform_ns > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Reals' )" )
       DO i = 1, inform_nr
@@ -1104,20 +1103,20 @@
         WRITE( ciface_unit, "('    finform%', A, ' = cinform%', A )" )       &
           TRIM( inform_s( i ) ), TRIM( inform_s( i ) )
       END DO
-    END IF  
+    END IF
     IF ( inform_nl > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Logicals' )" )
       DO i = 1, inform_nl
         WRITE( ciface_unit, "('    finform%', A, ' = cinform%', A )" )       &
           TRIM( inform_l( i ) ), TRIM( inform_l( i ) )
       END DO
-    END IF  
+    END IF
     IF ( inform_nt > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Derived types' )" )
       DO i = 1, inform_nt
-        len_name = LEN_TRIM( inform_t( i ) ) 
+        len_name = LEN_TRIM( inform_t( i ) )
         DO l = 1, len_name
-          st1 = inform_t( i )( l : l ) 
+          st1 = inform_t( i )( l : l )
           CALL STRING_lower_scalar( st1 )
           depends_lower( l : l ) = st1
         END DO
@@ -1131,7 +1130,7 @@
             depends_lower( 1 : len_name )
         END IF
       END DO
-    END IF  
+    END IF
     IF ( inform_nc > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Strings' )" )
       DO i = 1, inform_nc
@@ -1143,7 +1142,7 @@
       & )" ) TRIM( inform_c( i ) ), TRIM( inform_c( i ) ),                    &
              TRIM( inform_c( i ) ), TRIM( inform_c( i ) )
       END DO
-    END IF  
+    END IF
     WRITE( ciface_unit, "(                                                     &
  & '    RETURN', /, &
  & '', /, &
@@ -1164,7 +1163,7 @@
         WRITE( ciface_unit, "('    cinform%', A, ' = finform%', A )" )       &
           TRIM( inform_i( i ) ), TRIM( inform_i( i ) )
       END DO
-    END IF  
+    END IF
     IF ( inform_nr + inform_ns > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Reals' )" )
       DO i = 1, inform_nr
@@ -1175,20 +1174,20 @@
         WRITE( ciface_unit, "('    cinform%', A, ' = finform%', A )" )       &
           TRIM( inform_s( i ) ), TRIM( inform_s( i ) )
       END DO
-    END IF  
+    END IF
     IF ( inform_nl > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Logicals' )" )
       DO i = 1, inform_nl
         WRITE( ciface_unit, "('    cinform%', A, ' = finform%', A )" )       &
           TRIM( inform_l( i ) ), TRIM( inform_l( i ) )
       END DO
-    END IF  
+    END IF
     IF ( inform_nt > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Derived types' )" )
       DO i = 1, inform_nt
-        len_name = LEN_TRIM( inform_t( i ) ) 
+        len_name = LEN_TRIM( inform_t( i ) )
         DO l = 1, len_name
-          st1 = inform_t( i )( l : l ) 
+          st1 = inform_t( i )( l : l )
           CALL STRING_lower_scalar( st1 )
           depends_lower( l : l ) = st1
         END DO
@@ -1202,7 +1201,7 @@
             depends_lower( 1 : len_name )
          END IF
       END DO
-    END IF  
+    END IF
     IF ( inform_nc > 0 ) THEN
       WRITE( ciface_unit, "( '', /, '    ! Strings' )" )
       DO i = 1, inform_nc
@@ -1215,7 +1214,7 @@
       & )" ) TRIM( inform_c( i ) ), TRIM( inform_c( i ) ),                     &
              TRIM( inform_c( i ) ), TRIM( inform_c( i ) )
       END DO
-    END IF  
+    END IF
     WRITE( ciface_unit, "(                                                     &
  & '    RETURN', /, &
  & '', /, &
@@ -1224,7 +1223,7 @@
   END IF
 
   WRITE( ciface_unit, "(                                                       &
- &  '  END MODULE GALAHAD_', A, '_double_ciface' )" ) TRIM( package_upper )
+ &  '  END MODULE GALAHAD_', A, '_precision_ciface' )" ) TRIM( package_upper )
 
   WRITE( ciface_unit, "(                                                       &
  & '', /, &
@@ -1233,7 +1232,7 @@
  & '!  -------------------------------------', /, &
  & '', /, &
  & '  SUBROUTINE ', A, '_initialize( cdata, ccontrol, status ) BIND( C ) ', /, &
- & '  USE GALAHAD_', A, '_double_ciface', /, &
+ & '  USE GALAHAD_', A, '_precision_ciface', /, &
  & '  IMPLICIT NONE', /, &
  & '', /, &
  & '!  dummy arguments', /, &
@@ -1281,7 +1280,7 @@
  & '!  ----------------------------------------', /, &
  & '', /, &
  & '  SUBROUTINE ', A, '_read_specfile( ccontrol, cspecfile ) BIND( C )', /, &
- & '  USE GALAHAD_', A, '_double_ciface', /, &
+ & '  USE GALAHAD_', A, '_precision_ciface', /, &
  & '  IMPLICIT NONE', /, &
  & '', /, &
  & '!  dummy arguments', /, &
@@ -1337,7 +1336,7 @@
  & '!  ---------------------------------', /, &
  & '', /, &
  & '  SUBROUTINE ', A, '_import( ccontrol, cdata, status ) BIND( C )', /, &
- & '  USE GALAHAD_', A, '_double_ciface', /, &
+ & '  USE GALAHAD_', A, '_precision_ciface', /, &
  & '  IMPLICIT NONE', /, &
  & '', /, &
  & '!  dummy arguments', /, &
@@ -1364,16 +1363,9 @@
  & '', /, &
  & '  fdata%f_indexing = f_indexing', /, &
  & '', /, &
- & '!  handle C sparse matrix indexing', /, &
- & '', /, &
- & '  IF ( .NOT. f_indexing ) THEN', /, &
- & '', /, &
  & '!  import the problem data into the required ', A, ' structure', /, &
  & '', /, &
- & '    CALL f_', A, '_import( fcontrol, fdata, status )', /, &
- & '  ELSE', /, &
- & '    CALL f_', A, '_import( fcontrol, fdata, status )', /, &
- & '  END IF', /, &
+ & '  CALL f_', A, '_import( fcontrol, fdata, status )', /, &
  & '', /, &
  & '!  copy control out', /, &
  & '', /, &
@@ -1394,7 +1386,7 @@
  & '!  ----------------------------------------', /, &
  & '', /, &
  & '  SUBROUTINE ', A, '_reset_control( ccontrol, cdata, status ) BIND( C )', /, &
- & '  USE GALAHAD_', A, '_double_ciface', /, &
+ & '  USE GALAHAD_', A, '_precision_ciface', /, &
  & '  IMPLICIT NONE', /, &
  & '', /, &
  & '!  dummy arguments', /, &
@@ -1439,7 +1431,7 @@
  & '!  --------------------------------------', /, &
  & '', /, &
  & '  SUBROUTINE ', A, '_information( cdata, cinform, status ) BIND( C ) ', /, &
- & '  USE GALAHAD_', A, '_double_ciface', /, &
+ & '  USE GALAHAD_', A, '_precision_ciface', /, &
  & '  IMPLICIT NONE', /, &
  & '', /, &
  & '!  dummy arguments', /, &
@@ -1479,7 +1471,7 @@
  & '!  ------------------------------------', /, &
  & '', /, &
  & '  SUBROUTINE ', A, '_terminate( cdata, ccontrol, cinform ) BIND( C ) ', /, &
- & '  USE GALAHAD_', A, '_double_ciface', /, &
+ & '  USE GALAHAD_', A, '_precision_ciface', /, &
  & '  IMPLICIT NONE', /, &
  & '', /, &
  & '!  dummy arguments', /, &
@@ -1528,7 +1520,7 @@
      TRIM( package_lower )
 
   CLOSE( UNIT = ciface_unit )
-  WRITE( out, "( 1X, A, '_ciface.f90 constructed' )" ) TRIM( package_lower )
+  WRITE( out, "( 1X, A, '_ciface.F90 constructed' )" ) TRIM( package_lower )
 
   STOP
 

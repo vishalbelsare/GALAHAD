@@ -5,9 +5,11 @@
 #include <math.h>
 #include <stdlib.h>
 #include <float.h>
-#include "sls.h"
+#include "galahad_precision.h"
+#include "galahad_cfunctions.h"
+#include "galahad_sls.h"
 
-int maxabsarray(double a[],int n, double *maxabs);
+ipc_ maxabsarray(rpc_ a[], ipc_ n, rpc_ *maxabs);
 
 int main(void) {
 
@@ -17,33 +19,33 @@ int main(void) {
     struct sls_inform_type inform;
 
     // Set problem data
-    int n = 5; // dimension of A
-    int ne = 7; // number of entries of A
-    int dense_ne = 15; // number of elements of A as a dense matrix
-    int row[] = {0, 1, 1, 2, 2, 3, 4}; // row indices, NB lower triangle
-    int col[] = {0, 0, 4, 1, 2, 2, 4}; // column indices
-    int ptr[] = {0, 1, 3, 5, 6, 7}; // pointers to indices
-    double val[] = {2.0, 3.0, 6.0, 4.0,  1.0, 5.0, 1.0}; // values
-    double dense[] = {2.0, 3.0, 0.0, 0.0, 4.0, 1.0, 0.0, 
+    ipc_ n = 5; // dimension of A
+    ipc_ ne = 7; // number of entries of A
+    ipc_ dense_ne = 15; // number of elements of A as a dense matrix
+    ipc_ row[] = {0, 1, 1, 2, 2, 3, 4}; // row indices, NB lower triangle
+    ipc_ col[] = {0, 0, 4, 1, 2, 2, 4}; // column indices
+    ipc_ ptr[] = {0, 1, 3, 5, 6, 7}; // pointers to indices
+    rpc_ val[] = {2.0, 3.0, 6.0, 4.0,  1.0, 5.0, 1.0}; // values
+    rpc_ dense[] = {2.0, 3.0, 0.0, 0.0, 4.0, 1.0, 0.0,
                       0.0, 5.0, 0.0, 0.0, 6.0, 0.0, 0.0, 1.0};
-    double rhs[] = {8.0, 45.0, 31.0, 15.0, 17.0};
-    double sol[] = {1.0, 2.0, 3.0, 4.0, 5.0};
-    int i, status;
-    double x[n];
-    double error[n];
+    rpc_ rhs[] = {8.0, 45.0, 31.0, 15.0, 17.0};
+    rpc_ sol[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    ipc_ i, status;
+    rpc_ x[n];
+    rpc_ error[n];
 
-    double norm_residual;
-    double good_x = pow( DBL_EPSILON, 0.3333 );
+    rpc_ norm_residual;
+    rpc_ good_x = pow( DBL_EPSILON, 0.3333 );
 
     printf(" C sparse matrix indexing\n\n");
 
     printf(" basic tests of storage formats\n\n");
 
     printf(" storage          RHS   refine  partial\n");
-    for( int d=1; d <= 3; d++){
+    for( ipc_ d=1; d <= 3; d++){
 
-        // Initialize SLS - use the sils solver
-        sls_initialize( "sils", &data, &control, &status );
+        // Initialize SLS - use the sytr solver
+        sls_initialize( "sytr", &data, &control, &status );
 
         // Set user-defined control options
         control.f_indexing = false; // C sparse matrix indexing
@@ -57,7 +59,7 @@ int main(void) {
                 break;
             case 2: // sparse by rows
                 printf(" sparse by rows ");
-                sls_analyse_matrix( &control, &data, &status, n, 
+                sls_analyse_matrix( &control, &data, &status, n,
                                     "sparse_by_rows", ne, NULL, col, ptr );
                 sls_factorize_matrix( &data, &status, ne, val );
                 break;
@@ -83,10 +85,10 @@ int main(void) {
             printf("  fail ");
           }
         }else{
-            printf(" SLS_solve exit status = %1i\n", inform.status);
+            printf(" SLS_solve exit status = %1" i_ipc_ "\n", inform.status);
         }
         //printf("sol: ");
-        //for( int i = 0; i < n; i++) printf("%f ", x[i]);
+        //for( ipc_ i = 0; i < n; i++) printf("%f ", x[i]);
 
         // resolve, this time using iterative refinement
         control.max_iterative_refinements = 1;
@@ -104,7 +106,7 @@ int main(void) {
             printf("   fail ");
           }
         }else{
-            printf(" SLS_solve exit status = %1i\n", inform.status);
+            printf(" SLS_solve exit status = %1" i_ipc_ "\n", inform.status);
         }
 
         // obtain the solution by part solves
@@ -123,7 +125,7 @@ int main(void) {
             printf("   fail ");
           }
         }else{
-            printf(" SLS_solve exit status = %1i\n", inform.status);
+            printf(" SLS_solve exit status = %1" i_ipc_ "\n", inform.status);
         }
 
         // Delete internal workspace
@@ -132,16 +134,17 @@ int main(void) {
     }
 }
 
-int maxabsarray(double a[],int n, double *maxabs)
+ipc_ maxabsarray(rpc_ a[], ipc_ n, rpc_ *maxabs)
  {
-    int i;
-    double b,max;
+    ipc_ i;
+    rpc_ b, max;
     max=abs(a[0]);
     for(i=1; i<n; i++)
     {
-        b = abs(a[i]);
+        b = fabs(a[i]);
 	if(max<b)
-          max=b;       
+          max=b;
     }
     *maxabs=max;
+    return 0;
  }

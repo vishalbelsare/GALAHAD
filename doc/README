@@ -63,16 +63,20 @@ In order to get GALAHAD working, here is what you need to do.
    your installation will be trouble free. Fortunately GNU make is the
    defualt version of make available with most modern operating systems]
 
-2. Put the file
+2. *- Skip this step if GALAHAD has been downloaded directly using svn or git -*
+
+   Put the file
 
      galahad.tar.gz
 
    in a suitable directory for which the ./galahad
    directory will be a sub-directory.
 
-3. Issue the command
+2. *- Skip this step if GALAHAD has been downloaded directly using svn or git -*
 
-     tar xzvf galahad.tar.gz
+   Issue the command
+
+     tar xzvf galahad.tar.gz]
 
 4. Set the environment variable GALAHAD to point at the
    ./galahad directory, i.e.,
@@ -91,10 +95,10 @@ In order to get GALAHAD working, here is what you need to do.
    ./galahad/doc/README.cshrc and ./galahad/doc/README.bashrc for
    more details.
 
-5. You should also dowload a subset of the HSL Archive packages, ad02,
-   ma27 and ma33, needed by GALAHAD. This is *NOT* open source software,
-   but the packages are availble as a bundle, WITHOUT CHARGE, by
-   registering at
+5. Preferably you should also download a subset of the HSL Archive packages,
+   ad02, ma27 and ma33, that are highly useful to GALAHAD. This is *NOT*
+   open source software, but the packages are available as a bundle,
+   WITHOUT CHARGE, by registering at
 
      http://www.hsl.rl.ac.uk/download/hslarchive-galahad/latest
 
@@ -109,6 +113,12 @@ In order to get GALAHAD working, here is what you need to do.
      $GALAHAD/src/makedefs/packages.default
 
    see 8 below.)
+
+   Without these codes, your choice of key linear equation solvers is
+   severly restricted. In particular, if the default solver, ssids, is
+   not supported by yur compiler, you will be forced to use LAPACk
+   routines, and these may limit the size of problems that can be
+   solved.
 
 6. If you are intending to use the AMPL interface, set the environment
    variable AMPLDIR to point to the directory in which you have installed
@@ -141,7 +151,7 @@ In order to get GALAHAD working, here is what you need to do.
     clashes between GALAHAD and AMPL C interfaces ]
 
     Details on how to obtain demo (problem-size limited) or full versions
-    of AMPL are given in 
+    of AMPL are given in
 
       https://ampl.com/try-ampl/download-a-free-demo/
 
@@ -185,19 +195,20 @@ In order to get GALAHAD working, here is what you need to do.
 
    Once you have downloaded this file, it should be uncompressed in a
    convenient location, and we recommend that you choose the directory ./
-   The file ./galahad/src/makedefs/packages.default ** MUST BE EDITED **
-   to activate the HSL packages.
+
+   ** N.B. The file ./galahad/src/makedefs/packages.default
+   ** MUST BE EDITED ** to activate the HSL packages.
 
    Once GALAHAD has been installed, any further changes to optional
    software should be recorded in the file ./galahad/src/makedefs/packages,
-   and GALAHAD recompiled so that the changes take effect (see 13 below).
+   and GALAHAD recompiled so that the changes take effect (see 14 below).
 
 9. You may also optionally provide binary code for a number of external
    packages that might make GALAHAD run faster. These include the
-   BLAS ((basic linear algebra subprograms), LAPACK, METIS, PARDISO,
-   MKL PARDISO, and WSMP.  Don't worry if you cannot provide thses; GALAHAD 
-   will compile non-optimised versions of the necessary ones (BLAS, LAPACK) 
-   and provide dummy versions of the others. See 
+   BLAS ((basic linear algebra subprograms), LAPACK, MeTiS, PARDISO,
+   MKL PARDISO, PASTIX, MUMPS and  WSMP.  Don't worry if you cannot provide
+   thses; GALAHAD will compile non-optimised versions of the necessary ones
+   (BLAS, LAPACK) and provide dummy versions of the others. See
    ./galahad/doc/README.external for more details.
 
 10. If you plan to use the (limited) Matlab interfaces, make sure that
@@ -214,11 +225,34 @@ In order to get GALAHAD working, here is what you need to do.
 
       sudo apt-get install libhwloc-dev
 
-   on Debian/Ubuntu systems, or
+   on Debian/Ubuntu systems,
 
       sudo rpm --install libhwloc-dev
 
-   for Redhat ones. Check with your system administrator if you need help!
+   for Redhat ones, or
+
+      brew install hwloc
+
+   for Macs under OSX.
+
+   You will also need to set environment variables  OMP_CANCELLATION,
+   OMP_NESTED and OMP_PROC_BIND to TRUE, and OMP_MAX_ACTIVE_LEVEL to
+   the maximum number of parallel threads you wish to use.
+   Under the sh/bash shell, put
+
+     export OMP_CANCELLATION=true
+     export OMP_NESTED=true
+     export OMP_PROC_BIND=true
+     export OMP_MAX_ACTIVE_LEVELS=8
+
+   in your startup script, to use a maximum of 8 threads, and for csh/tcsh
+
+     setenv OMP_CANCELLATION true
+     setenv OMP_NESTED true
+     setenv OMP_PROC_BIND true
+     setenv OMP_MAX_ACTIVE_LEVELS 8
+
+   Check with your system administrator if you need help!
 
    If it *really* is impossible to install libhwloc-dev, you should edit
    the file $GALAHAD/src/spral/config.h and replace the line
@@ -262,7 +296,7 @@ In order to get GALAHAD working, here is what you need to do.
    and answer the questions as prompted. This command sets up
    machine/os/compiler-specific files, and (optionally) compiles all
    (or suitable sub-components) of GALAHAD (and SiFDec/CUTEst if required),
-   plus hooks into C and to Matlab.
+   plus hooks into C and Python, and to Matlab.
 
    You may issue the $ARCHDEFS/install_optrove command for as many
    machine/os/compiler combinations as you wish to support, and you
@@ -311,7 +345,7 @@ In order to get GALAHAD working, here is what you need to do.
 
 16. Both the makefiles and the run scripts use default values for a
     variety of variables. If you wish to use non-default values, you
-    should edit the appropiate files 
+    should edit the appropriate files
      $GALAHAD/makefiles/#
     and
      $GALAHAD/bin/sys/#
@@ -410,26 +444,39 @@ In order to get GALAHAD working, here is what you need to do.
     You should add this to your LIBPATH environment variable,
     and may then link the library with the -lgalahad compiler flag.
     Access to optional auxiliary libraries is via
-     -lgalahad_hsl -lgalahad_pardiso -lgalahad_wsmp -lgalahad_metis
+     -lgalahad_hsl  -lgalahad_spral -lgalahad_mkl_pardiso
+     -lgalahad_pardiso -lgalahad_wsmp -lgalahad_pastix -lgalahad_mumps
+     -lgalahad_mpi -galahad_umfpack -lgalahad_metis_dummy
      -lgalahad_lapack -lgalahad_blas
-    as appropriate. C versions may be accessed by additionally prepending
-      -lgalahad_c -lgalahad_hsl_c 
+    as appropriate; any of these dummies may be replaced by their real
+    equivalents by using the proper library name, but note that
+    access to Metis 4 or 5 requires -lgalahad_metis4 or _metis5.
+    C versions may be accessed by additionally pre-pending
+      -lgalahad_c -lgalahad_hsl_c
     to the previous list
 
     =============
     DOCUMENTATION
     =============
 
-22. PDF documentation for each package is available in the directory 
-    $GALAHAD/doc; those for C interfaces have a suffic _c . 
-    Man pages for sdgal and gal (as well as dgal and rbgal) are in
-    $GALAHAD/man/man1, while individual C interfaces have additional 
-    documentation in $GALAHAD/man/man3. You may wish to add $GALAHAD/man 
-    to your MANPATH environment variable.
+22. Documentation for package "pack" is available as follows:
 
-23. If you like using graphical user-interfaces, why not try the GALAHAD
+     - Fortran. PDF documentation is in $GALAHAD/doc/"pack".pdf
+     - C. HTML documenation is available online from
+          https://ralna.github.io/galahad_docs/html/C .
+          There is also inferior PDF documentation in $GALAHAD/doc/"pack"_c.pdf
+          and a man page in $GALAHAD/man/man3/"pack"_c.3, with a
+          an introductory man page in $GALAHAD/man/man3/galahad_c.3
+     - Python. HTML documenation is online as
+          https://ralna.github.io/galahad_docs/html/Python .
+     - Julia. HTML documenation is online as
+          https://ralna.github.io/galahad_docs/html/Julia .
+     - Matlab. help is provided using hslp galahad_"pack" within Matlab
+     - general. An introductory paper is in $GALAHAD/doc/galahad.pdf
+
+[23. If you like using graphical user-interfaces, why not try the GALAHAD
      python GUI(see $GAHALAD/doc/README.gui for details). This has not
-     been kept fully up to date, so is probably of limited use.
+     been updated in years, so is probably of limited use.]
 
     ====
     NEWS
@@ -441,6 +488,17 @@ In order to get GALAHAD working, here is what you need to do.
 
     for updates/bug fixes/news.
 
+    ================
+    REPORTING ISSUES
+    ================
+
+25. If you have issues that you would like to report, such as potential bugs
+    or extensons that might be useful, please use the issues page
+
+       https://github.com/ralna/GALAHAD/issues
+
+    and we will respond as quickly as we can.
+
 Best of luck
 
  Nick Gould
@@ -450,8 +508,11 @@ Best of luck
 For GALAHAD productions
 25 April 2002
 
-This version (4.0), additionally with 
+From version 4.2, additionally with
 
  Jari Fowkes
+ Alexis Montoison
 
-18 March 2022
+This version, 5.1
+
+5th January 2025

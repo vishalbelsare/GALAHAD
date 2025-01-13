@@ -2,10 +2,10 @@
 
  basic tests of storage formats
 
-C: residual =   2.2e-16 status = 0
-R: residual =   2.2e-16 status = 0
-D: residual =   4.4e-16 status = 0
-L: residual =   8.9e-16 status = 0
-S: residual =   2.2e-16 status = 0
-I: residual =   0.0e+00 status = 0
-Z: residual =   1.1e-16 status = 0
+C: residual =  7.0e-310 status = 0
+R: residual =  7.0e-310 status = 0
+D: residual =  7.0e-310 status = 0
+L: residual =  7.0e-310 status = 0
+S: residual =  7.0e-310 status = 0
+I: residual =  7.0e-310 status = 0
+Z: residual =  7.0e-310 status = 0

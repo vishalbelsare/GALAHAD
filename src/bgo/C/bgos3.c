@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 #include <math.h>
-#include "bgo.h"
+#include "galahad_precision.h"
+#include "galahad_bgo.h"
 
 int main(void) {
 
@@ -13,43 +14,43 @@ int main(void) {
     struct bgo_inform_type inform;
 
     // Initialize BGO
-    bgo_initialize( &data, &control, &inform );
+    ipc_ status;
+    bgo_initialize( &data, &control, &status );
 
     // Set user-defined control options
     control.f_indexing = false; // C sparse matrix indexing (default)
     control.attempts_max = 1000;
     control.max_evals = 1000;
     control.trb_control.maxit = 10;
-    control.print_level = 1;
+    //control.print_level = 1;
 
     // Set problem data
-    int n = 3; // dimension
-    int ne = 5; // Hesssian elements
-    double x[] = {1.,1.,1.}; // start from one
-    double infty = 1e20; // infinity
-    double x_l[] = {-infty,-infty, 0.}; 
-    double x_u[] = {1.1,1.1,1.1};
+    ipc_ n = 3; // dimension
+    ipc_ ne = 5; // Hesssian elements
+    rpc_ x[] = {1.,1.,1.}; // start from one
+    rpc_ infty = 1e20; // infinity
+    rpc_ x_l[] = {-infty,-infty, 0.};
+    rpc_ x_u[] = {1.1,1.1,1.1};
     char H_type[] = "coordinate"; // specify co-ordinate storage
-    int H_row[] = {0, 2, 1, 2, 2}; // Hessian H
-    int H_col[] = {0, 0, 1, 1, 2}; // NB lower triangle
-    
+    ipc_ H_row[] = {0, 2, 1, 2, 2}; // Hessian H
+    ipc_ H_col[] = {0, 0, 1, 1, 2}; // NB lower triangle
+
     // Reverse-communication input/output
-    int eval_status;
-    double f;
-    double g[n];
-    double u[n], v[n];
-    double H_val[ne]; 
+    ipc_ eval_status;
+    rpc_ f = 0.0;
+    rpc_ g[n];
+    rpc_ u[n], v[n];
+    rpc_ H_val[ne];
 
     // Set Hessian storage format, structure and problem bounds
-    int status;
-    bgo_import( &control, &data, &status, n, x_l, x_u, 
+    bgo_import( &control, &data, &status, n, x_l, x_u,
                 H_type, ne, H_row, H_col, NULL );
 
     // Solve the problem
     while(true){ // reverse-communication loop
 
         // Call BGO_solve
-        bgo_solve_reverse_with_mat( &data, &status, &eval_status, n, x, f, g, 
+        bgo_solve_reverse_with_mat( &data, &status, &eval_status, n, x, f, g,
                                     ne, H_val, u, v );
 
         // Evaluate f(x) and its derivatives as required
@@ -119,17 +120,22 @@ int main(void) {
     bgo_information( &data, &inform, &status );
 
     // Print solution details
-    printf("iter: %d \n", inform.trb_inform.iter);
+    printf("iter: %" d_ipc_ " \n", inform.trb_inform.iter);
     printf("x: ");
-    for(int i = 0; i < n; i++) printf("%f ", x[i]);
-    printf("\n");
-    printf("objective: %f \n", inform.obj);
-    printf("gradient: ");
-    for(int i = 0; i < n; i++) printf("%f ", g[i]);
-    printf("\n");
-    printf("f_eval: %d \n", inform.f_eval);
+#ifdef REAL_128
+    for(ipc_ i = 0; i < n; i++) printf("%f ", (double)x[i]);
+    printf("\nobjective: %f \ngradient: ", (double)inform.obj);
+    for(ipc_ i = 0; i < n; i++) printf("%f ", (double)g[i]);
+    printf("\nf_eval: %" d_ipc_ " \n", inform.f_eval);
+    printf("time: %f \n", (double)inform.time.clock_total);
+#else
+    for(ipc_ i = 0; i < n; i++) printf("%f ", x[i]);
+    printf("\nobjective: %f \ngradient: ", inform.obj);
+    for(ipc_ i = 0; i < n; i++) printf("%f ", g[i]);
+    printf("\nf_eval: %" d_ipc_ " \n", inform.f_eval);
     printf("time: %f \n", inform.time.clock_total);
-    printf("status: %d \n", inform.status);
+#endif
+    printf("status: %" d_ipc_ " \n", inform.status);
 
     // Delete internal workspace
     bgo_terminate( &data, &control, &inform );

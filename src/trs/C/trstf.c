@@ -4,7 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include "trs.h"
+#include "galahad_precision.h"
+#include "galahad_cfunctions.h"
+#include "galahad_trs.h"
+#ifdef REAL_128
+#include <quadmath.h>
+#endif
 
 int main(void) {
 
@@ -14,44 +19,44 @@ int main(void) {
     struct trs_inform_type inform;
 
     // Set problem data
-    int n = 3; // dimension of H
-    int m = 1; // dimension of A
-    int H_ne = 4; // number of elements of H
-    int M_ne = 3; // number of elements of M
-    int A_ne = 3; // number of elements of A
-    int H_dense_ne = 6; // number of elements of H
-    int M_dense_ne = 6; // number of elements of M
-    int H_row[] = {1, 2, 3, 3}; // row indices, NB lower triangle
-    int H_col[] = {1, 2, 3, 1};
-    int H_ptr[] = {1, 2, 3, 5};
-    int M_row[] = {1, 2, 3}; // row indices, NB lower triangle
-    int M_col[] = {1, 2, 3};
-    int M_ptr[] = {1, 2, 3, 4};
-    int A_row[] = {1, 1, 1} ;
-    int A_col[] = {1, 2, 3};
-    int A_ptr[] = {1, 4};
-    double H_val[] = {1.0, 2.0, 3.0, 4.0};
-    double M_val[] = {1.0, 2.0, 1.0};
-    double A_val[] = {1.0, 1.0, 1.0};
-    double H_dense[] = {1.0, 0.0, 2.0, 4.0, 0.0, 3.0};
-    double M_dense[] = {1.0, 0.0, 2.0, 0.0, 0.0, 1.0};
-    double H_diag[] = {1.0, 0.0, 2.0};
-    double M_diag[] = {1.0, 2.0, 1.0};
-    double f = 0.96;
-    double radius = 1.0;
-    double c[] = {0.0, 2.0, 0.0};
+    ipc_ n = 3; // dimension of H
+    ipc_ m = 1; // dimension of A
+    ipc_ H_ne = 4; // number of elements of H
+    ipc_ M_ne = 3; // number of elements of M
+    ipc_ A_ne = 3; // number of elements of A
+    ipc_ H_dense_ne = 6; // number of elements of H
+    ipc_ M_dense_ne = 6; // number of elements of M
+    ipc_ H_row[] = {1, 2, 3, 3}; // row indices, NB lower triangle
+    ipc_ H_col[] = {1, 2, 3, 1};
+    ipc_ H_ptr[] = {1, 2, 3, 5};
+    ipc_ M_row[] = {1, 2, 3}; // row indices, NB lower triangle
+    ipc_ M_col[] = {1, 2, 3};
+    ipc_ M_ptr[] = {1, 2, 3, 4};
+    ipc_ A_row[] = {1, 1, 1} ;
+    ipc_ A_col[] = {1, 2, 3};
+    ipc_ A_ptr[] = {1, 4};
+    rpc_ H_val[] = {1.0, 2.0, 3.0, 4.0};
+    rpc_ M_val[] = {1.0, 2.0, 1.0};
+    rpc_ A_val[] = {1.0, 1.0, 1.0};
+    rpc_ H_dense[] = {1.0, 0.0, 2.0, 4.0, 0.0, 3.0};
+    rpc_ M_dense[] = {1.0, 0.0, 2.0, 0.0, 0.0, 1.0};
+    rpc_ H_diag[] = {1.0, 0.0, 2.0};
+    rpc_ M_diag[] = {1.0, 2.0, 1.0};
+    rpc_ f = 0.96;
+    rpc_ radius = 1.0;
+    rpc_ c[] = {0.0, 2.0, 0.0};
 
-    char st;
-    int status;
-    double x[n];
+    char st = ' ';
+    ipc_ status;
+    rpc_ x[n];
     char ma[3];
 
     printf(" Fortran sparse matrix indexing\n\n");
 
     printf(" basic tests of storage formats\n\n");
 
-    for( int a_is=0; a_is <= 1; a_is++){ // add a linear constraint?
-      for( int m_is=0; m_is <= 1; m_is++){ // include a scaling matrix?
+    for( ipc_ a_is=0; a_is <= 1; a_is++){ // add a linear constraint?
+      for( ipc_ m_is=0; m_is <= 1; m_is++){ // include a scaling matrix?
 
         if (a_is == 1 && m_is == 1 ) {
           strcpy(ma, "MA");
@@ -66,7 +71,7 @@ int main(void) {
           strcpy(ma, "  ");
         }
 
-        for( int storage_type=1; storage_type <= 4; storage_type++){
+        for( ipc_ storage_type=1; storage_type <= 4; storage_type++){
 
           // Initialize TRS
           trs_initialize( &data, &control, &status );
@@ -90,22 +95,22 @@ int main(void) {
                   }
                   // solve the problem
                   if (a_is == 1 && m_is == 1 ) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        M_ne, M_val, m, A_ne, A_val, NULL );
                   }
                   else if (a_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        0, NULL, m, A_ne, A_val, NULL );
                   }
                   else if (m_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        M_ne, M_val, 0, 0, NULL, NULL );
                   }
                   else {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        0, NULL, 0, 0, NULL, NULL );
                   }
@@ -125,22 +130,22 @@ int main(void) {
                   }
                   // solve the problem
                   if (a_is == 1 && m_is == 1 ) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        M_ne, M_val, m, A_ne, A_val, NULL );
                   }
                   else if (a_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        0, NULL, m, A_ne, A_val, NULL );
                   }
                   else if (m_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        M_ne, M_val, 0, 0, NULL, NULL );
                   }
                   else {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_ne, H_val, x,
                                        0, NULL, 0, 0, NULL, NULL );
                   }
@@ -160,23 +165,23 @@ int main(void) {
                   }
                   // solve the problem
                   if (a_is == 1 && m_is == 1 ) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_dense_ne, H_dense, x,
-                                       M_dense_ne, M_dense, m, A_ne, A_val, 
+                                       M_dense_ne, M_dense, m, A_ne, A_val,
                                        NULL );
                   }
                   else if (a_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_dense_ne, H_dense, x,
                                        0, NULL, m, A_ne, A_val, NULL );
                   }
                   else if (m_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_dense_ne, H_dense, x,
                                        M_dense_ne, M_dense, 0, 0, NULL, NULL );
                   }
                   else {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, H_dense_ne, H_dense, x,
                                        0, NULL, 0, 0, NULL, NULL );
                   }
@@ -196,22 +201,22 @@ int main(void) {
                   }
                   // solve the problem
                   if (a_is == 1 && m_is == 1 ) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, n, H_diag, x,
                                        n, M_diag, m, A_ne, A_val, NULL );
                   }
                   else if (a_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, n, H_diag, x,
                                        0, NULL, m, A_ne, A_val, NULL );
                   }
                   else if (m_is == 1) {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, n, H_diag, x,
                                        n, M_diag, 0, 0, NULL, NULL );
                   }
                   else {
-                    trs_solve_problem( &data, &status, n, 
+                    trs_solve_problem( &data, &status, n,
                                        radius, f, c, n, H_diag, x,
                                        0, NULL, 0, 0, NULL, NULL );
                   }
@@ -219,11 +224,15 @@ int main(void) {
               }
 
           trs_information( &data, &inform, &status );
-
-          printf("format %c%s: TRS_solve_problem exit status = %1i, f = %.2f\n",
-                 st, ma, inform.status, inform.obj );
+#ifdef REAL_128
+// interim replacement for quad output: $GALAHAD/include/galahad_pquad_trs.h
+#include "galahad_pquad_trs.h"
+#else
+          printf("format %c%s: TRS_solve_problem exit status = %1" i_ipc_ 
+                 ", f = %.2f\n", st, ma, inform.status, inform.obj );
+#endif
           //printf("x: ");
-          //for( int i = 0; i < n+m; i++) printf("%f ", x[i]);
+          //for( ipc_ i = 0; i < n+m; i++) printf("%f ", x[i]);
 
           // Delete internal workspace
           trs_terminate( &data, &control, &inform );

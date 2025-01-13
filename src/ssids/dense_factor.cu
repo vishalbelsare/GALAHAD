@@ -1,5 +1,6 @@
 /* Copyright (c) 2013 Science and Technology Facilities Council (STFC)
  * Authors: Evgueni Ovtchinnikov and Jonathan Hogg
+ * This version: GALAHAD 5.1 - 2024-11-12 AT 10:30 GMT
  *
  * This file contains CUDA kernels for partial LL^T and LDL^T factorization
  * of dense submatrices.
@@ -15,8 +16,71 @@
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
 
-#include "ssids/gpu/kernels/datatypes.h"
-#include "cuda/cuda_check.h"
+#include "ssids_rip.hxx"
+#include "ssids_gpu_kernels_datatypes.h"
+#include "spral_cuda_cuda_check.h"
+
+#ifdef REAL_32
+#define multinode_chol_type multinode_chol_type_single
+#define multiblock_fact_type multiblock_fact_type_single
+#define cstat_data_type cstat_data_type_single
+#define cu_block_ldlt_init cu_block_ldlt_init_single
+#define cu_block_chol cu_block_chol_single
+#define cu_multiblock_fact_setup cu_multiblock_fact_setup_single
+#define cu_block_ldlt cu_block_ldlt_single
+#define cu_multiblock_ldlt cu_multiblock_ldlt_single
+#define cu_square_ldlt cu_square_ldlt_single
+#define cu_multiblock_chol cu_multiblock_chol_single
+#define cu_collect_stats cu_collect_stats_single
+#define spral_ssids_block_ldlt spral_ssids_block_ldlt_single
+#define spral_ssids_block_llt spral_ssids_block_llt_single
+#define spral_ssids_cuda_collect_stats spral_ssids_cuda_collect_stats_single
+#define spral_ssids_multiblock_ldlt spral_ssids_multiblock_ldlt_single
+#define spral_ssids_multiblock_ldlt_setup spral_ssids_multiblock_ldlt_setup_single
+#define spral_ssids_multiblock_llt spral_ssids_multiblock_llt_single
+#define spral_ssids_multiblock_llt_setup spral_ssids_multiblock_llt_setup_single
+#define spral_ssids_square_ldlt spral_ssids_square_ldlt_single
+#elif REAL_128
+#define multinode_chol_type multinode_chol_type_quadruple
+#define multiblock_fact_type multiblock_fact_type_quadruple
+#define cstat_data_type cstat_data_type_quadruple
+#define cu_block_ldlt_init cu_block_ldlt_init_quadruple
+#define cu_block_chol cu_block_chol_quadruple
+#define cu_multiblock_fact_setup cu_multiblock_fact_setup_quadruple
+#define cu_block_ldlt cu_block_ldlt_quadruple
+#define cu_multiblock_ldlt cu_multiblock_ldlt_quadruple
+#define cu_square_ldlt cu_square_ldlt_quadruple
+#define cu_multiblock_chol cu_multiblock_chol_quadruple
+#define cu_collect_stats cu_collect_stats_quadruple
+#define spral_ssids_block_ldlt spral_ssids_block_ldlt_quadruple
+#define spral_ssids_block_llt spral_ssids_block_llt_quadruple
+#define spral_ssids_cuda_collect_stats spral_ssids_cuda_collect_stats_quadruple
+#define spral_ssids_multiblock_ldlt spral_ssids_multiblock_ldlt_quadruple
+#define spral_ssids_multiblock_ldlt_setup spral_ssids_multiblock_ldlt_setup_quadruple
+#define spral_ssids_multiblock_llt spral_ssids_multiblock_llt_quadruple
+#define spral_ssids_multiblock_llt_setup spral_ssids_multiblock_llt_setup_quadruple
+#define spral_ssids_square_ldlt spral_ssids_square_ldlt_quadruple
+#else
+#define multinode_chol_type multinode_chol_type_double
+#define multiblock_fact_type multiblock_fact_type_double
+#define cstat_data_type cstat_data_type_double
+#define cu_block_ldlt_init cu_block_ldlt_init_double
+#define cu_block_chol cu_block_chol_double
+#define cu_multiblock_fact_setup cu_multiblock_fact_setup_double
+#define cu_block_ldlt cu_block_ldlt_double
+#define cu_multiblock_ldlt cu_multiblock_ldlt_double
+#define cu_square_ldlt cu_square_ldlt_double
+#define cu_multiblock_chol cu_multiblock_chol_double
+#define cu_collect_stats cu_collect_stats_double
+#define spral_ssids_block_ldlt spral_ssids_block_ldlt_double
+#define spral_ssids_block_llt spral_ssids_block_llt_double
+#define spral_ssids_cuda_collect_stats spral_ssids_cuda_collect_stats_double
+#define spral_ssids_multiblock_ldlt spral_ssids_multiblock_ldlt_double
+#define spral_ssids_multiblock_ldlt_setup spral_ssids_multiblock_ldlt_setup_double
+#define spral_ssids_multiblock_llt spral_ssids_multiblock_llt_double
+#define spral_ssids_multiblock_llt_setup spral_ssids_multiblock_llt_setup_double
+#define spral_ssids_square_ldlt spral_ssids_square_ldlt_double
+#endif
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
 
@@ -33,13 +97,13 @@ using namespace spral::ssids::gpu;
 
 namespace /* anon */ {
 
-extern __shared__ volatile double SharedMemory[];
+extern __shared__ volatile rpc_ SharedMemory[];
 
 __global__ void
 cu_block_ldlt_init(
-    const int ncols,
-    int *const stat,
-    int *const ind
+    const ipc_ ncols,
+    ipc_ *const stat,
+    ipc_ *const ind
 ) {
   if (threadIdx.x == 0) {
     stat[0] = ncols; // successful pivots
@@ -51,28 +115,28 @@ cu_block_ldlt_init(
 template
 <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __device__ void
 dev_init_chol_fact(
-    const unsigned int block,
-    const int nrows, // number of rows of the factorized matrix
-    const int ncols, // number of columns thereof
+    const uipc_ block,
+    const ipc_ nrows, // number of rows of the factorized matrix
+    const ipc_ ncols, // number of columns thereof
     const ELEMENT_TYPE *const a, // array of elements of A
-    const int lda, // leading dimension of a
+    const ipc_ lda, // leading dimension of a
     volatile ELEMENT_TYPE *const fs // initial L factor (shared mem)
 ) {
-  const int SIZE_X = TILES*TILE_SIZE;
+  const ipc_ SIZE_X = TILES*TILE_SIZE;
 
-  int x; // row index
+  ipc_ x; // row index
 
-  for ( int tile = 0; tile < TILES; tile++ ) {
+  for ( ipc_ tile = 0; tile < TILES; tile++ ) {
     if ( tile ) { // load A's offdiagonal tiles into shared memory
       x = ncols + threadIdx.x + (tile - 1)*TILE_SIZE +
         (TILES - 1)*TILE_SIZE*block; // offdiagonal row index in A
       fs[threadIdx.x + tile*TILE_SIZE + SIZE_X*threadIdx.y] =
-        ( x < nrows && threadIdx.y < ncols ) ? 
+        ( x < nrows && threadIdx.y < ncols ) ?
           a[x + lda*threadIdx.y] : 0.0;
     }
     else { // load the diagonal (pivot) tile
@@ -87,23 +151,23 @@ dev_init_chol_fact(
 template
 <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __device__ void
 dev_save_chol_fact(
-    const unsigned int block,
-    const int nrows, // number of rows of the factorized matrix
-    const int ncols, // number of columns thereof
+    const uipc_ block,
+    const ipc_ nrows, // number of rows of the factorized matrix
+    const ipc_ ncols, // number of columns thereof
     const volatile ELEMENT_TYPE *const fs, // initial L factor (shared mem)
     ELEMENT_TYPE *const f, // array of elements of L
-    const int ldf // leading dimension of f
+    const ipc_ ldf // leading dimension of f
 ) {
-  const int SIZE_X = TILES*TILE_SIZE;
+  const ipc_ SIZE_X = TILES*TILE_SIZE;
 
-  int x; // row index
+  ipc_ x; // row index
 
-  for ( int tile = 0; tile < TILES; tile++ ) {
+  for ( ipc_ tile = 0; tile < TILES; tile++ ) {
     if ( tile ) { // upload the relevant elements of fs to f
       x = ncols + threadIdx.x + (tile - 1)*TILE_SIZE +
         (TILES - 1)*TILE_SIZE*block;
@@ -111,7 +175,7 @@ dev_save_chol_fact(
         f[x + ldf*threadIdx.y] =
           fs[threadIdx.x + tile*TILE_SIZE + SIZE_X*threadIdx.y];
     }
-    else if ( block == 0 ) { 
+    else if ( block == 0 ) {
       // upload to f and fd
       if ( threadIdx.x < ncols && threadIdx.y < ncols )
         f[threadIdx.x + ldf*threadIdx.y] =
@@ -123,23 +187,23 @@ dev_save_chol_fact(
 template
 <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __device__ void
 dev_block_chol(
-    const int block,
-    const int nrows,
-    const int ncols,
+    const ipc_ block,
+    const ipc_ nrows,
+    const ipc_ ncols,
     const ELEMENT_TYPE *const a,
-    const int lda,
+    const ipc_ lda,
     ELEMENT_TYPE *const f,
-    const int ldf,
-    int *const stat
+    const ipc_ ldf,
+    ipc_ *const stat
 ) {
-  const int SIZE_X = TILES * TILE_SIZE;
+  const ipc_ SIZE_X = TILES * TILE_SIZE;
 
-  int ip;
+  ipc_ ip;
   ELEMENT_TYPE v;
 
   volatile ELEMENT_TYPE *const work = (volatile ELEMENT_TYPE*)SharedMemory;
@@ -164,9 +228,9 @@ dev_block_chol(
     if (threadIdx.y < TILES)
       work[threadIdx.x + TILE_SIZE*threadIdx.y + SIZE_X*ip] /= v;
     __syncthreads();
-    
+
     if ((threadIdx.y > ip) && (threadIdx.y < ncols)) {
-      for (int x = threadIdx.x + TILE_SIZE; x < SIZE_X; x += TILE_SIZE)
+      for (ipc_ x = threadIdx.x + TILE_SIZE; x < SIZE_X; x += TILE_SIZE)
         work[x + SIZE_X*threadIdx.y] -=
           work[threadIdx.y + SIZE_X*ip] * work[x + SIZE_X*ip];
       if (threadIdx.x > ip)
@@ -187,72 +251,72 @@ dev_block_chol(
 template
 <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __global__ void
 cu_block_chol(
-    const int nrows,
-    const int ncols,
+    const ipc_ nrows,
+    const ipc_ ncols,
     const ELEMENT_TYPE *const a,
-    const int lda,
+    const ipc_ lda,
     ELEMENT_TYPE *const f,
-    const int ldf,
-    int *const stat
+    const ipc_ ldf,
+    ipc_ *const stat
 ) {
   dev_block_chol< ELEMENT_TYPE, TILE_SIZE, TILES >
     ( blockIdx.x, nrows, ncols, a, lda, f, ldf, stat );
 }
 
 struct multinode_chol_type {
-   int nrows;
-   int ncols;
-   double *lcol;
+   ipc_ nrows;
+   ipc_ ncols;
+   rpc_ *lcol;
 };
 
 // input data type for multiblock_fact and multiblock_chol
 // each CUDA block gets a copy
 struct multiblock_fact_type {
-   int nrows; // no node's rows
-   int ncols; // no node's cols
-   int ld;    // node's leading dimension
-   int p;     // no rows above the pivot block
-   double *aptr; // pointer to this node's A matrix
-   double *ldptr; // pointer to this node's LD matrix
-   int offf;  // this node's L offset in the array of all Ls
-   double *dptr; // pointer to this node's D in array of all Ds
-   int node;  // node index
-   int offb;  // the idx of the first CUDA block processing this node
+   ipc_ nrows; // no node's rows
+   ipc_ ncols; // no node's cols
+   ipc_ ld;    // node's leading dimension
+   ipc_ p;     // no rows above the pivot block
+   rpc_ *aptr; // pointer to this node's A matrix
+   rpc_ *ldptr; // pointer to this node's LD matrix
+   ipc_ offf;  // this node's L offset in the array of all Ls
+   rpc_ *dptr; // pointer to this node's D in array of all Ds
+   ipc_ node;  // node index
+   ipc_ offb;  // the idx of the first CUDA block processing this node
 };
 
 __global__ void
 cu_multiblock_fact_setup(
     struct multinode_fact_type *ndata,
     struct multiblock_fact_type *const mbfdata,
-    const int step,
-    const int block_size,
-    const int blocks,
-    const int offb,
-    int *const stat,
-    int *const ind,
-    int *const nl
+    const ipc_ step,
+    const ipc_ block_size,
+    const ipc_ blocks,
+    const ipc_ offb,
+    ipc_ *const stat,
+    ipc_ *const ind,
+    ipc_ *const nl
 ) {
   ndata += blockIdx.x;
-  const int ncols = ndata->ncols;
-  const int nrows = ndata->nrows;
-  double *const lval  = ndata->lval;
-  double *const ldval = ndata->ldval;
-  double *const dval  = ndata->dval;
-  int ib    = ndata->ib;
-  int jb    = ndata->jb;
-  int done  = ndata->done;
-  int rght  = ndata->rght;
-  const int lbuf  = ndata->lbuf;
+  const ipc_ ncols = ndata->ncols;
+  const ipc_ nrows = ndata->nrows;
+  rpc_ *const lval  = ndata->lval;
+  rpc_ *const ldval = ndata->ldval;
+  rpc_ *const dval  = ndata->dval;
+  ipc_ ib    = ndata->ib;
+  ipc_ jb    = ndata->jb;
+  ipc_ done  = ndata->done;
+  ipc_ rght  = ndata->rght;
+  const ipc_ lbuf  = ndata->lbuf;
 
   if (jb < ib)
     return;
 
-  const int pivoted = stat[blockIdx.x];
+  const ipc_ pivoted = stat[blockIdx.x];
 
   if (pivoted > 0) {
     done += pivoted;
@@ -281,8 +345,8 @@ cu_multiblock_fact_setup(
       ndata->rght = rght;
   }
 
-  const int rb = nrows - done;
-  int cb = rght - ib + 1;
+  const ipc_ rb = nrows - done;
+  ipc_ cb = rght - ib + 1;
 
   if (cb > block_size)
     cb = block_size;
@@ -294,14 +358,14 @@ cu_multiblock_fact_setup(
   if (ind && (threadIdx.x < cb) && (threadIdx.y == 0))
     ind[blockIdx.x*block_size + threadIdx.x] = cb + 1;
 
-  int k = (rb - cb - 1)/(block_size*(blocks - 1)) + 1;
+  ipc_ k = (rb - cb - 1)/(block_size*(blocks - 1)) + 1;
 
-  __shared__ volatile int ncb;
+  __shared__ volatile ipc_ ncb;
   if ((threadIdx.x == 0) && (threadIdx.y == 0))
     ncb = atomicAdd(&nl[0], k);
-  
-  __shared__ volatile int iwork[9];
-  __shared__ double *volatile lptr, *volatile ldptr, *volatile dptr;
+
+  __shared__ volatile ipc_ iwork[9];
+  __shared__ rpc_ *volatile lptr, *volatile ldptr, *volatile dptr;
   if ((threadIdx.x == 0) && (threadIdx.y == 0)) {
     iwork[0] = cb;
     iwork[1] = rb;
@@ -316,7 +380,7 @@ cu_multiblock_fact_setup(
   }
   __syncthreads();
 
-  for (int i = threadIdx.y; i < k; i += blockDim.y) {
+  for (ipc_ i = threadIdx.y; i < k; i += blockDim.y) {
     switch(threadIdx.x) {
     case 0: mbfdata[ncb+i].ncols = iwork[0]; break;
     case 1: mbfdata[ncb+i].nrows = iwork[1]; break;
@@ -365,7 +429,7 @@ offp        number of rows in A_u
 
 /*
 
-The next function initializes L and the main diagonal and subdiagonal 
+The next function initializes L and the main diagonal and subdiagonal
 of D**(-1).
 
 L and L*D are stored in two shared memory arrays fs and fds, each
@@ -373,8 +437,8 @@ arranged into TILES square tiles of size TILE_SIZE. The kernel for
 factorizing just one node uses TILES = 7, and the one for simultaneous
 factorization of several nodes uses TILES = 11.
 
-Each CUDA block uses dev_init_fact to load A_d into the first tile of fs 
-and up to (TILES - 1)*TILE_SIZE rows of A_u and A_l into the remaining 
+Each CUDA block uses dev_init_fact to load A_d into the first tile of fs
+and up to (TILES - 1)*TILE_SIZE rows of A_u and A_l into the remaining
 TILES - 1 tiles.
 
 The two diagonals of D**(-1) are stored in a shared memory array
@@ -383,35 +447,35 @@ of size 2*TILE_SIZE, initialized to 0 by this kernel.
 */
 template <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __device__ void
 dev_init_fact(
-    const unsigned int block, // relative CUDA block number
-    const int nrows, 
-    const int ncols, 
-    const int offp,
+    const uipc_ block, // relative CUDA block number
+    const ipc_ nrows,
+    const ipc_ ncols,
+    const ipc_ offp,
     const ELEMENT_TYPE *const a, // array of elements of A
-    const int lda, // leading dimension of a
+    const ipc_ lda, // leading dimension of a
     volatile ELEMENT_TYPE *const fs, // initial L factor (shared mem)
     volatile ELEMENT_TYPE *const ds // initial D**(-1) (shared mem)
 ) {
-  const int SIZE_X = TILES * TILE_SIZE;
+  const ipc_ SIZE_X = TILES * TILE_SIZE;
 
-  int x, y; // position indices
+  ipc_ x, y; // position indices
 
   y = threadIdx.y % TILE_SIZE; // fs & fds column processed by this thread
 
   if ( threadIdx.y < TILE_SIZE ) {
-    for ( int tile = 0; tile < TILES; tile += 2 ) {
+    for ( ipc_ tile = 0; tile < TILES; tile += 2 ) {
       if ( tile ) { // load A_u and A_l's even tiles into shared memory
         x = threadIdx.x + (tile - 1)*TILE_SIZE +
             (TILES - 1)*TILE_SIZE*block; // offdiagonal row index in A
         if ( x >= offp )
           x += ncols; // skip A_d
         fs[threadIdx.x + tile*TILE_SIZE + SIZE_X*threadIdx.y] =
-          ( x < nrows && threadIdx.y < ncols ) ? 
+          ( x < nrows && threadIdx.y < ncols ) ?
             a[x + lda*threadIdx.y] : 0.0;
       }
       else { // load A_d
@@ -423,7 +487,7 @@ dev_init_fact(
   }
   else {
     // load A_u and A_l's odd tiles into shared memory
-    for (int tile = 1; tile < TILES; tile += 2) {
+    for (ipc_ tile = 1; tile < TILES; tile += 2) {
       x = threadIdx.x + (tile - 1)*TILE_SIZE +
         (TILES - 1)*TILE_SIZE*block;
       if (x >= offp)
@@ -442,33 +506,33 @@ dev_init_fact(
 
 template <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __device__ void
 dev_save_fact(
-    const unsigned int block,
-    const int nrows,
-    const int ncols,
-    const int offp, 
-    const int my, // save only if my is non-zero
+    const uipc_ block,
+    const ipc_ nrows,
+    const ipc_ ncols,
+    const ipc_ offp,
+    const ipc_ my, // save only if my is non-zero
     const volatile ELEMENT_TYPE *const fs, // L (shared mem)
     const volatile ELEMENT_TYPE *const fds, // L*D (shared mem)
     const volatile ELEMENT_TYPE *const ds, // 2 diags of D**(-1) (shared mem)
     ELEMENT_TYPE *const f, // L (global mem)
-    const int ldf, // leading dimension of f
+    const ipc_ ldf, // leading dimension of f
     ELEMENT_TYPE *const fd, // L*D (global mem)
-    const int ldfd, // leading dimension of fd
+    const ipc_ ldfd, // leading dimension of fd
     ELEMENT_TYPE *const d // 2 diags of D**(-1) (global mem)
 ) {
-  const int SIZE_X = TILES * TILE_SIZE;
+  const ipc_ SIZE_X = TILES * TILE_SIZE;
 
-  int x, y; // position indices
+  ipc_ x, y; // position indices
 
   y = threadIdx.y % TILE_SIZE; // fs & fds column processed by this thread
 
   if ( threadIdx.y < TILE_SIZE ) { // warps 0, 1
-    for ( int tile = 0; tile < TILES; tile += 2 ) {
+    for ( ipc_ tile = 0; tile < TILES; tile += 2 ) {
       if ( tile ) { // upload L_u, L_l, L_u*D and L_l*D's even tiles
         x = threadIdx.x + (tile - 1)*TILE_SIZE +
             (TILES - 1)*TILE_SIZE*block;
@@ -481,7 +545,7 @@ dev_save_fact(
             fds[threadIdx.x + tile*TILE_SIZE + SIZE_X*threadIdx.y];
         }
       }
-      else if ( block == 0 ) { 
+      else if ( block == 0 ) {
         // upload L_d and L_d*D
         if ( threadIdx.x < ncols && threadIdx.y < ncols && my ) {
           f[offp + threadIdx.x + ldf*threadIdx.y] =
@@ -496,7 +560,7 @@ dev_save_fact(
     } // loop through even tiles ends here
   }
   else { // upload L_u, L_l, L_u*D and L_l*D's odd tiles (warps 2, 3)
-    for (int tile = 1; tile < TILES; tile += 2) {
+    for (ipc_ tile = 1; tile < TILES; tile += 2) {
       x = threadIdx.x + (tile - 1)*TILE_SIZE +
         (TILES - 1)*TILE_SIZE*block;
       if (x >= offp) // skip L_d
@@ -513,20 +577,20 @@ dev_save_fact(
 
 template <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __device__ void
 dev_init_max(
-    const int ncols,
+    const ipc_ ncols,
     const volatile ELEMENT_TYPE *const fs,
-    const int mx, // this thread mask
-    volatile int *const mask, // pivot index/mask
+    const ipc_ mx, // this thread mask
+    volatile ipc_ *const mask, // pivot index/mask
     volatile bool *const not_max, // "not largest" flag
-    volatile int &jps, // the index of the largest element
-    volatile int &quit // pivoting failure flag
+    volatile ipc_ &jps, // the index of the largest element
+    volatile ipc_ &quit // pivoting failure flag
 ) {
-  const int SIZE_X = TILES*TILE_SIZE;
+  const ipc_ SIZE_X = TILES*TILE_SIZE;
 
   if (threadIdx.y == 0) {
     mask[threadIdx.x] = mx; // initialize the pivot index
@@ -548,7 +612,7 @@ dev_init_max(
 
   // select the leftmost among the largest elements of the row
   if ((threadIdx.y == 0) && (not_max[threadIdx.x] == 0))
-    atomicMin((int*)&jps, threadIdx.x); // in case of a tie, choose the leftmost
+    atomicMin((ipc_*)&jps, threadIdx.x); // in case of a tie, choose the leftmost
   __syncthreads();
 }
 
@@ -576,11 +640,11 @@ The pivot that has the smallest inverse is selected.
 
 template< typename ELEMENT_TYPE >
 __device__ void
-dev_select_pivots_at_root( 
+dev_select_pivots_at_root(
     const ELEMENT_TYPE *const fs,
-    const int ld, // leading dimension of fs
-    int &ip,
-    int &jp,
+    const ipc_ ld, // leading dimension of fs
+    ipc_ &ip,
+    ipc_ &jp,
     ELEMENT_TYPE &a11,
     ELEMENT_TYPE &a12,
     ELEMENT_TYPE &a22,
@@ -613,11 +677,11 @@ dev_select_pivots_at_root(
 
 template< typename ELEMENT_TYPE >
 __device__ void
-dev_select_pivots( 
-    const volatile ELEMENT_TYPE *const fs, 
-    const int ld, // leading dimension of fs
-    int &ip, 
-    int &jp,
+dev_select_pivots(
+    const volatile ELEMENT_TYPE *const fs,
+    const ipc_ ld, // leading dimension of fs
+    ipc_ &ip,
+    ipc_ &jp,
     ELEMENT_TYPE &a11,
     ELEMENT_TYPE &a12,
     ELEMENT_TYPE &a22,
@@ -653,11 +717,11 @@ dev_select_pivots(
 template< typename ELEMENT_TYPE >
 __device__ bool
 dev_1x1_pivot_fails(
-    const int x,
-    const int ip,
+    const ipc_ x,
+    const ipc_ ip,
     volatile ELEMENT_TYPE *const fs,
     volatile ELEMENT_TYPE *const fds,
-    const int ld,
+    const ipc_ ld,
     const ELEMENT_TYPE det,
     const ELEMENT_TYPE delta,
     const ELEMENT_TYPE eps
@@ -687,12 +751,12 @@ dev_1x1_pivot_fails(
 template< typename ELEMENT_TYPE >
 __device__ bool
 dev_2x2_pivot_fails(
-    const int x,
-    const int ip,
-    const int jp,
+    const ipc_ x,
+    const ipc_ ip,
+    const ipc_ jp,
     volatile ELEMENT_TYPE *const fs,
     volatile ELEMENT_TYPE *const fds,
-    const int ld,
+    const ipc_ ld,
     const ELEMENT_TYPE a11,
     const ELEMENT_TYPE a12,
     const ELEMENT_TYPE a22,
@@ -706,7 +770,7 @@ dev_2x2_pivot_fails(
   if ( fabs(det) <= fabs(a11)*fabs(a22)*1.0e-15 ||
        // the determinant is smaller than round-off errors ->
        // the pivot is considered to be zero
-       fabs(det) <= eps*(fabs(a11) + fabs(a22) + fabs(a12)) 
+       fabs(det) <= eps*(fabs(a11) + fabs(a22) + fabs(a12))
        // the inverse of the pivot is of the order 1/eps ->
        // the pivot is considered to be zero
     ) {
@@ -727,7 +791,7 @@ dev_2x2_pivot_fails(
     else // non-zero off-diagonal element found ->
       return 1; // this column to be delayed
   }
-  else if ( fabs(det) <= 
+  else if ( fabs(det) <=
              delta*max(fabs(a22*u - a12*v), fabs(a11*v - a12*u)) )
              // pivot too small ->
     return 1; // this column to be delayed
@@ -740,18 +804,18 @@ dev_2x2_pivot_fails(
 
 /* The next function eliminates the pivoted column from non-pivoted */
 
-template < 
-typename ELEMENT_TYPE, 
-unsigned int TILE_SIZE, 
-unsigned int TILES // = 7 for a single node and = 11 for many nodes
+template <
+typename ELEMENT_TYPE,
+uipc_ TILE_SIZE,
+uipc_ TILES // = 7 for a single node and = 11 for many nodes
 >
 __device__ void
 dev_eliminate_1x1(
-    int &x, // row for this thread
-    const int y, // column for this thread
-    const int ip, // pivoted column
+    ipc_ &x, // row for this thread
+    const ipc_ y, // column for this thread
+    const ipc_ ip, // pivoted column
     volatile ELEMENT_TYPE *const fs,
-    const int ld,
+    const ipc_ ld,
     const ELEMENT_TYPE p // pivot value
 ) {
   if ( x != ip )
@@ -768,16 +832,16 @@ dev_eliminate_1x1(
 
 /* The next function eliminates the two pivoted columns from non-pivoted */
 
-template< typename ELEMENT_TYPE, 
-unsigned int TILE_SIZE, unsigned int TILES >
+template< typename ELEMENT_TYPE,
+uipc_ TILE_SIZE, uipc_ TILES >
 __device__ void
 dev_eliminate_2x2(
-    int &x,
-    const int y,
-    const int ip,
-    const int jp,
+    ipc_ &x,
+    const ipc_ y,
+    const ipc_ ip,
+    const ipc_ jp,
     volatile ELEMENT_TYPE *const fs,
-    const int ld,
+    const ipc_ ld,
     const ELEMENT_TYPE pi,
     const ELEMENT_TYPE pj
 ) {
@@ -795,15 +859,15 @@ dev_eliminate_2x2(
 
 /* The next function performs elimination in one tile only */
 
-template< typename ELEMENT_TYPE, unsigned int TILE_SIZE >
+template< typename ELEMENT_TYPE, uipc_ TILE_SIZE >
 inline __device__ void
 dev_eliminate(
-    int &x,
-    const int y,
-    const int ip,
-    const int jp,
+    ipc_ &x,
+    const ipc_ y,
+    const ipc_ ip,
+    const ipc_ jp,
     volatile ELEMENT_TYPE *const fs,
-    const int ld,
+    const ipc_ ld,
     const ELEMENT_TYPE pi,
     const ELEMENT_TYPE pj
 ) {
@@ -822,52 +886,52 @@ The outline of the factorization algorithm is as follows.
 1. L = A
 2. A diagonal block of L of size 1 or 2 is selected
 3. A division of the corresponding (one or two) columns of L
-   by the selected block (pivoting) is considered and 
-   is accepted only if the elements of the resulting 
+   by the selected block (pivoting) is considered and
+   is accepted only if the elements of the resulting
    columns are not going to be greater than the inverse
-   of the "pivoting threshold" delta; otherwise kernel 
+   of the "pivoting threshold" delta; otherwise kernel
    terminates.
 4. If not all columns are pivoted, go to 2.
 
 Called by cu_block_ldlt and cu_multiblock_ldlt factorization kernels.
 
 */
-template< typename ELEMENT_TYPE, 
-unsigned int TILE_SIZE, unsigned int TILES >
+template< typename ELEMENT_TYPE,
+uipc_ TILE_SIZE, uipc_ TILES >
 __device__ void
 dev_block_ldlt(
-    const unsigned int block,
-    const int nrows, // number of rows of the factorized matrix
-    const int ncols, // number of columns thereof
-    const int offp, // number of rows above the pivot block
+    const uipc_ block,
+    const ipc_ nrows, // number of rows of the factorized matrix
+    const ipc_ ncols, // number of columns thereof
+    const ipc_ offp, // number of rows above the pivot block
     ELEMENT_TYPE *const a, // array of elements of A
-    const int lda, // leading dimension of a
+    const ipc_ lda, // leading dimension of a
     ELEMENT_TYPE *const f, // array of elements of the L factor
-    const int ldf, // leading dimension of f
+    const ipc_ ldf, // leading dimension of f
     ELEMENT_TYPE *const fd, // array of elements of L*D
-    const int ldfd, // leading dimension of fd
+    const ipc_ ldfd, // leading dimension of fd
     ELEMENT_TYPE *const d, // array for main diagonal and subdiagonal of D
     const ELEMENT_TYPE delta, // pivoting threashold
     const ELEMENT_TYPE eps, // zero pivot threashold
-    int *const index, // pivot order index
-    int *const stat  // number of successful pivots
+    ipc_ *const index, // pivot order index
+    ipc_ *const stat  // number of successful pivots
 ) {
-  const int SIZE_X = TILES*TILE_SIZE;
+  const ipc_ SIZE_X = TILES*TILE_SIZE;
 
-  int ip, jp; // pivot row and col indices
-  int x, y; // position indices
-  int mx, my; // masks
+  ipc_ ip, jp; // pivot row and col indices
+  ipc_ x, y; // position indices
+  ipc_ mx, my; // masks
   ELEMENT_TYPE a11, a12, a22, det; // 2x2 pivot data
 
   __shared__ volatile ELEMENT_TYPE fs[SIZE_X*TILE_SIZE]; // work array for f
   __shared__ volatile ELEMENT_TYPE fds[SIZE_X*TILE_SIZE]; // work array for fd
   __shared__ volatile ELEMENT_TYPE ds[2*TILE_SIZE]; // work array for d
-  __shared__ volatile int mask[TILE_SIZE]; // pivot mask/index
+  __shared__ volatile ipc_ mask[TILE_SIZE]; // pivot mask/index
   __shared__ volatile bool not_max[TILE_SIZE]; // flag for finding the largest row elm
-  
-  __shared__ volatile int quit; // failure flag
-  __shared__ volatile int jps; // pivot column index
-  
+
+  __shared__ volatile ipc_ quit; // failure flag
+  __shared__ volatile ipc_ jps; // pivot column index
+
   y = threadIdx.y % TILE_SIZE; // fs & fds column processed by this thread
 
   // load the diagonal and off-diagonal tiles into shared memory
@@ -880,7 +944,7 @@ dev_block_ldlt(
   dev_init_max< ELEMENT_TYPE, TILE_SIZE, TILES >
     ( ncols, fs, mx, mask, not_max, jps, quit );
 
-  for ( int row = 0, pivoted = 0; row < ncols; ) {
+  for ( ipc_ row = 0, pivoted = 0; row < ncols; ) {
 
     // select the pivot based on the row's largest element index jps
     ip = row;
@@ -909,7 +973,7 @@ dev_block_ldlt(
 
     }
     else { // meanwhile, one thread of the fourth warp is inverting the pivot
-    
+
       if ( threadIdx.x == 0 && threadIdx.y == TILE_SIZE + 4 ) {
         mask[ip] = pivoted + 1; // assume pivot is ok for now
         if ( ip == jp ) {
@@ -919,7 +983,7 @@ dev_block_ldlt(
         else {
           mask[jp] = pivoted + 2; // assume pivot is ok for now
           if ( fabs(det) > fabs(a11)*fabs(a22)*1.0e-15 &&
-               fabs(det) > eps*(fabs(a11) + fabs(a22) + fabs(a12)) ) {          
+               fabs(det) > eps*(fabs(a11) + fabs(a22) + fabs(a12)) ) {
             ds[2*pivoted    ] = a22/det;
             ds[2*pivoted + 1] = -a12/det;
             ds[2*pivoted + 2] = a11/det;
@@ -943,7 +1007,7 @@ dev_block_ldlt(
       __syncthreads();
       break; // done
     }
-    
+
     // update successful pivots count
     if ( ip == jp )
       pivoted++;
@@ -967,7 +1031,7 @@ dev_block_ldlt(
 
     // process the first (TILES - 3) tiles right away;
     // the even tiles are processed by the first two warps,
-    // the odd by the other two    
+    // the odd by the other two
     if ( ip == jp ) {
       a11 = fs[ip + SIZE_X*y];
       if ( my == 0 )
@@ -981,7 +1045,7 @@ dev_block_ldlt(
         dev_eliminate_2x2< ELEMENT_TYPE, TILE_SIZE, TILES >
           ( x, y, ip, jp, fs, SIZE_X, a11, a12 );
     }
-    
+
     // from here on, the first two warps deal with finding the largest element
     // in the next pivot row, while the other two continue elimination
     // in the remaining three tiles
@@ -1000,12 +1064,12 @@ dev_block_ldlt(
     }
     __syncthreads();
 
-    if ( threadIdx.y < TILE_SIZE ) {  
+    if ( threadIdx.y < TILE_SIZE ) {
       // mark elements in the pending row that cannot be largest
       if ( row < ncols ) {
         // check the element in column threadIdx.x
         if ( threadIdx.x != threadIdx.y && mx == 0 && my == 0 &&
-             fabs(fs[row + SIZE_X*threadIdx.x]) < 
+             fabs(fs[row + SIZE_X*threadIdx.x]) <
              fabs(fs[row + SIZE_X*threadIdx.y]) )
           not_max[threadIdx.x] = 1; // no good: a larger value exists elsewhere
       }
@@ -1021,7 +1085,7 @@ dev_block_ldlt(
       // select leftmost largest element in the row
       if ( row < ncols ) {
         if ( threadIdx.y == 0 && not_max[threadIdx.x] == 0 )
-          atomicMin((int*)&jps, threadIdx.x); // in case of a tie, choose the leftmost
+          atomicMin((ipc_*)&jps, threadIdx.x); // in case of a tie, choose the leftmost
       }
     }
     else { // do elimination in the (TILES)-th tile
@@ -1037,7 +1101,7 @@ dev_block_ldlt(
 
   // update successful pivot ordering in index;
   // if this CUDA block failed to pivot the part of column threadIdx.y of A
-  // delegated to it, then possible successful pivoting of its other parts 
+  // delegated to it, then possible successful pivoting of its other parts
   // by other blocks is canceled by zeroing index[threadIdx.y];
   // if some other part of this column is unsuccessful, index[threadIdx.y]
   // remains zero
@@ -1050,28 +1114,28 @@ dev_block_ldlt(
 }
 
 template
-< 
+<
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __global__ void
 cu_block_ldlt(
-    const int nrows, // n.o. rows in A
-    const int ncols, // n.o. cols in A (<= TILE_SIZE)
-    const int offp,  // n.o. rows in A_u
+    const ipc_ nrows, // n.o. rows in A
+    const ipc_ ncols, // n.o. cols in A (<= TILE_SIZE)
+    const ipc_ offp,  // n.o. rows in A_u
     ELEMENT_TYPE *const a, // array of A's elements
-    const int lda, // leading dimension of a
+    const ipc_ lda, // leading dimension of a
     ELEMENT_TYPE *const f, // array of L's elements
-    const int ldf, // leading dimension of f
+    const ipc_ ldf, // leading dimension of f
     ELEMENT_TYPE *const fd, // array of (L*D)'s elements
-    const int ldfd, // leading dimension of fd
+    const ipc_ ldfd, // leading dimension of fd
     ELEMENT_TYPE *const d, // array of D**(-1)'s diagonal and subdiagonal elements
     const ELEMENT_TYPE delta, // pivoting threshold
     const ELEMENT_TYPE eps, // zero column threshold:
     // the column is zeroed if all elements are <= eps
-    int *const index, // pivot index (cf. permutation matrix P)
-    int *const stat // n.o. successful pivots
+    ipc_ *const index, // pivot index (cf. permutation matrix P)
+    ipc_ *const stat // n.o. successful pivots
 ) {
    dev_block_ldlt< ELEMENT_TYPE, TILE_SIZE, TILES >
       ( blockIdx.x, nrows, ncols, offp, a, lda, f, ldf,
@@ -1086,8 +1150,8 @@ cu_block_ldlt(
 template
 <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE, 
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __global__ void
 cu_multiblock_ldlt(
@@ -1095,28 +1159,28 @@ cu_multiblock_ldlt(
     ELEMENT_TYPE *f, // same for L
     const ELEMENT_TYPE delta, // same as in cu_block_fact
     const ELEMENT_TYPE eps, // same as in cu_block_fact
-    int *const index, // array of all pivot indices
-    int *const stat // array of successful pivots' numbers
+    ipc_ *const index, // array of all pivot indices
+    ipc_ *const stat // array of successful pivots' numbers
 ) {
    /*
     * Read information on what to do from global memory
     */
    mbfdata += blockIdx.x; // shift to the data for this CUDA block
-   int ncols = mbfdata->ncols; // n.o. cols in A processed by this CUDA block
+   ipc_ ncols = mbfdata->ncols; // n.o. cols in A processed by this CUDA block
    if ( ncols < 1 )
       return;
-   int nrows = mbfdata->nrows; // n.o. rows in A
-   int lda   = mbfdata->ld; // leading dimension of A
-   int p     = mbfdata->p; // n.o. rows in A_u
-   int node  = mbfdata->node; // A's number
-   int block  = mbfdata->offb; // relative CUDA block index
+   ipc_ nrows = mbfdata->nrows; // n.o. rows in A
+   ipc_ lda   = mbfdata->ld; // leading dimension of A
+   ipc_ p     = mbfdata->p; // n.o. rows in A_u
+   ipc_ node  = mbfdata->node; // A's number
+   ipc_ block  = mbfdata->offb; // relative CUDA block index
 
    f += mbfdata->offf; // shift to the array of this L elements
-   double *fd = mbfdata->ldptr;
-   double *a = mbfdata->aptr; // pointer to A
-   double *d = mbfdata->dptr; // pointer to D**(-1)
+   rpc_ *fd = mbfdata->ldptr;
+   rpc_ *a = mbfdata->aptr; // pointer to A
+   rpc_ *d = mbfdata->dptr; // pointer to D**(-1)
 
-   dev_block_ldlt < double, TILE_SIZE, TILES > 
+   dev_block_ldlt < rpc_, TILE_SIZE, TILES >
      ( block, nrows, ncols, p, a, lda, f, lda,
        fd, lda, d, delta, eps, &index[node*TILE_SIZE], &stat[node]);
 }
@@ -1135,40 +1199,40 @@ cu_multiblock_ldlt(
  kernel given below is applied to delayed columns, which
  together with the respective rows now form a square block at the
  lower left corner of the root node matrix.
- 
+
  The main difference between the factorization kernel below and
  those above is that the pivot is sought in the whole matrix
  because, in the above notation, blocks A_u and A_l are no
- longer present. Since this matrix may be too large to fit into 
- shared memory, the kernel below works mostly in the global memory 
- (shared memory is only used for finding the largest element of 
+ longer present. Since this matrix may be too large to fit into
+ shared memory, the kernel below works mostly in the global memory
+ (shared memory is only used for finding the largest element of
  a column).
 */
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_square_ldlt(
-    const int n, 
+    const ipc_ n,
     ELEMENT_TYPE *const a, // A on input, L on output
     ELEMENT_TYPE *const f, // L
     ELEMENT_TYPE *const w, // L*D
     ELEMENT_TYPE *const d, // main diag and subdiag of the inverse of D
-    const int ld, // leading dimension of a, f, w
+    const ipc_ ld, // leading dimension of a, f, w
     const ELEMENT_TYPE delta, // same as above
     const ELEMENT_TYPE eps, // same as above
-    int *const ind, // same as in cu_block_fact
-    int *const stat // same as in cu_block_fact
+    ipc_ *const ind, // same as in cu_block_fact
+    ipc_ *const stat // same as in cu_block_fact
 ) {
-  int x, y;
-  int col;
-  int ip, jp;
-  int pivoted, recent;
+  ipc_ x, y;
+  ipc_ col;
+  ipc_ ip, jp;
+  ipc_ pivoted, recent;
   ELEMENT_TYPE a11, a12, a22, det;
 
   volatile ELEMENT_TYPE *work = (volatile ELEMENT_TYPE*)SharedMemory; // work array
-  volatile int *const iwork = (volatile int*)&(work[blockDim.x]); // integer work array
-  volatile int *const iw = (volatile int*)&(iwork[blockDim.x]); // iw[0]: failure flag, 
+  volatile ipc_ *const iwork = (volatile ipc_*)&(work[blockDim.x]); // integer work array
+  volatile ipc_ *const iw = (volatile ipc_*)&(iwork[blockDim.x]); // iw[0]: failure flag,
                                        // iw[1]: largest col. elem. index
-  
+
   for ( x = threadIdx.x; x < n; x += blockDim.x ) {
     ind[x] = 0; // initialize pivot index/processed columns mask
     for ( y = 0; y < n; y++ )
@@ -1179,8 +1243,8 @@ cu_square_ldlt(
   __syncthreads();
 
   pivoted = 0; // n.o. pivoted cols
-  
-  for ( int pass = 0; ; pass++ ) { // failed cols are skipped until next pass
+
+  for ( ipc_ pass = 0; ; pass++ ) { // failed cols are skipped until next pass
 
     recent = 0; // n.o. cols pivoted during this pass
 
@@ -1220,7 +1284,7 @@ cu_square_ldlt(
             work[threadIdx.x] = work[x];
             iwork[threadIdx.x] = iwork[x];
           }
-      }    
+      }
       __syncthreads();
       // the first thread finds the largest element and its index
       if ( threadIdx.x == 0 ) {
@@ -1279,7 +1343,7 @@ cu_square_ldlt(
           ind[jp] = pivoted + 2;
           if ( fabs(det) > fabs(a11)*fabs(a22)*1.0e-15 &&
                fabs(det) > eps*(fabs(a11) + fabs(a22) + fabs(a12)) ) {
-            // ok to invert          
+            // ok to invert
             d[2*pivoted    ] = a22/det;
             d[2*pivoted + 1] = -a12/det;
             d[2*pivoted + 2] = a11/det;
@@ -1309,7 +1373,7 @@ cu_square_ldlt(
         for ( x = threadIdx.x; x < n; x += blockDim.x ) {
           for ( y = 0; y < n; y++ ) {
             if ( x != ip && x != jp && ind[y] == 0 ) {
-              f[x + ld*y] -= f[x + ld*ip] * f[ip + ld*y] + 
+              f[x + ld*y] -= f[x + ld*ip] * f[ip + ld*y] +
                              f[x + ld*jp] * f[jp + ld*y];
             }
           }
@@ -1321,16 +1385,16 @@ cu_square_ldlt(
         col++;
 
     } // loop across columns
-    
+
     if ( pivoted == n // all done
-            || 
+            ||
          recent == 0 ) // no pivotable columns left
       break;
   } // pass
-  
+
   if ( threadIdx.x == 0 )
     stat[0] = pivoted;
-  
+
   if ( pivoted < n ) // factorization failed
     return;
 
@@ -1344,88 +1408,88 @@ cu_square_ldlt(
 template
 <
 typename ELEMENT_TYPE,
-unsigned int TILE_SIZE,
-unsigned int TILES
+uipc_ TILE_SIZE,
+uipc_ TILES
 >
 __global__ void
 cu_multiblock_chol(
     struct multiblock_fact_type *mbfdata,
     ELEMENT_TYPE *f, // array of L nodes
-    int *stat // execution status
+    ipc_ *stat // execution status
 ) {
   /*
    * Read information on what to do from global memory
    */
   mbfdata += blockIdx.x;
-  int ncols = mbfdata->ncols;
+  ipc_ ncols = mbfdata->ncols;
   if ( ncols < 1 )
     return;
-  int nrows = mbfdata->nrows;
-  int ld    = mbfdata->ld;
-  int node  = mbfdata->node;
-  int block  = mbfdata->offb;
-   
+  ipc_ nrows = mbfdata->nrows;
+  ipc_ ld    = mbfdata->ld;
+  ipc_ node  = mbfdata->node;
+  ipc_ block  = mbfdata->offb;
+
   ELEMENT_TYPE *const a = mbfdata->aptr;
   f += mbfdata->offf;
   stat += node;
   dev_block_chol< ELEMENT_TYPE, TILE_SIZE, TILES >
     ( block, nrows, ncols, a, ld, f, ld, stat );
 }
-  
+
 struct cstat_data_type {
-  int nelim;
-  double *dval;
+  ipc_ nelim;
+  rpc_ *dval;
 };
 
-__global__ void 
+__global__ void
 cu_collect_stats(
-    const struct cstat_data_type *csdata, 
+    const struct cstat_data_type *csdata,
     struct cuda_stats *const stats
 ) {
    // Designed to be run with a single thread
    csdata += blockIdx.x;
-   double *const d = csdata->dval;
-   const int nelim = csdata->nelim;
+   rpc_ *const d = csdata->dval;
+   const ipc_ nelim = csdata->nelim;
 
-   int num_zero = 0;
-   int num_neg = 0;
-   int num_two = 0;
+   ipc_ num_zero = 0;
+   ipc_ num_neg = 0;
+   ipc_ num_two = 0;
 
-   for (int i = 0; i < nelim; ) {
-      const double a11 = d[2*i];
-      const double a21 = d[2*i + 1];
+   for (ipc_ i = 0; i < nelim; ) {
+      const rpc_ a11 = d[2*i];
+      const rpc_ a21 = d[2*i + 1];
       if ( a21 == 0.0 ) {
          // 1x1 pivot (can be a zero pivot)
-         if ( a11 == 0 ) 
+         if ( a11 == 0 )
             num_zero++;
-         if ( a11 < 0 ) 
+         if ( a11 < 0 )
             num_neg++;
          i++;
-      } 
+      }
       else {
          // 2x2 pivot (can't be a zero pivot)
-         const double a22 = d[2*(i + 1)];
+         const rpc_ a22 = d[2*(i + 1)];
          num_two++;
          // To check for negative eigenvalues, we exploit
          // det   = product of evals
          // trace = sum of evals
          // if det is negative, exactly one eval is negative;
          // otherwise, both have same sign, equal to sign of trace
-         const double det = a11*a22 - a21*a21;
-         const double trace = a11 + a22;
-         if ( det < 0 ) 
+         const rpc_ det = a11*a22 - a21*a21;
+         const rpc_ trace = a11 + a22;
+         if ( det < 0 )
             num_neg++;
-         else if ( trace < 0 ) 
+         else if ( trace < 0 )
             num_neg += 2;
          i += 2;
       }
    }
 
-   if ( num_neg > 0 ) 
+   if ( num_neg > 0 )
       atomicAdd(&(stats->num_neg), num_neg);
-   if ( num_zero > 0 ) 
+   if ( num_zero > 0 )
       atomicAdd(&(stats->num_zero), num_zero);
-   if ( num_two > 0 ) 
+   if ( num_two > 0 )
       atomicAdd(&(stats->num_two), num_two);
 }
 
@@ -1438,115 +1502,115 @@ cu_collect_stats(
 extern "C" {
 
 void spral_ssids_block_ldlt(
-      cudaStream_t *stream, int nrows, int ncols, int p,
-      double* a, int lda,
-      double* f, int ldf,
-      double* fd, int ldfd,
-      double* d,
-      double delta, double eps,
-      int* index, int* stat
+      cudaStream_t *stream, ipc_ nrows, ipc_ ncols, ipc_ p,
+      rpc_* a, ipc_ lda,
+      rpc_* f, ipc_ ldf,
+      rpc_* fd, ipc_ ldfd,
+      rpc_* d,
+      rpc_ delta, rpc_ eps,
+      ipc_* index, ipc_* stat
       ) {
-   
-   int nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(BLOCKS - 1)) + 1;
+
+   ipc_ nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(BLOCKS - 1)) + 1;
    cu_block_ldlt_init<<< 1, BLOCK_SIZE, 0, *stream >>>( ncols, stat, index );
-  
+
    dim3 threads(BLOCK_SIZE, 2*BLOCK_SIZE);
    cu_block_ldlt
-      < double, BLOCK_SIZE, BLOCKS >
+      < rpc_, BLOCK_SIZE, BLOCKS >
       <<< nblocks, threads, 0, *stream >>>
       ( nrows, ncols, p, a, lda, f, ldf, fd, ldfd, d, delta, eps, index, stat );
 }
 
-void spral_ssids_block_llt( cudaStream_t *stream, int nrows, int ncols,
-      double* a, int lda, double* f, int ldf, int* stat ) {
-   int smsize = CBLOCKS*BLOCK_SIZE*BLOCK_SIZE*sizeof(double);
-   int nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(CBLOCKS - 1)) + 1;
+void spral_ssids_block_llt( cudaStream_t *stream, ipc_ nrows, ipc_ ncols,
+      rpc_* a, ipc_ lda, rpc_* f, ipc_ ldf, ipc_* stat ) {
+   ipc_ smsize = CBLOCKS*BLOCK_SIZE*BLOCK_SIZE*sizeof(rpc_);
+   ipc_ nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(CBLOCKS - 1)) + 1;
    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
    cu_block_chol
-      < double, BLOCK_SIZE, CBLOCKS >
+      < rpc_, BLOCK_SIZE, CBLOCKS >
       <<< nblocks, threads, smsize, *stream >>>
       ( nrows, ncols, a, lda, f, ldf, stat );
 }
 
-void spral_ssids_collect_stats(cudaStream_t *stream, int nblk,
+void spral_ssids_collect_stats(cudaStream_t *stream, ipc_ nblk,
       const struct cstat_data_type *csdata, struct cuda_stats *stats) {
-   for(int i=0; i<nblk; i+=MAX_CUDA_BLOCKS) {
-      int nb = min(MAX_CUDA_BLOCKS, nblk-i);
+   for(ipc_ i=0; i<nblk; i+=MAX_CUDA_BLOCKS) {
+      ipc_ nb = min(MAX_CUDA_BLOCKS, nblk-i);
       cu_collect_stats <<<nb, 1, 0, *stream>>> (csdata+i, stats);
       CudaCheckError();
    }
 }
 
-void spral_ssids_multiblock_ldlt( cudaStream_t *stream, int nblocks,
-      struct multiblock_fact_type *mbfdata, double* f, double delta,
-      double eps, int* index, int* stat ) {
+void spral_ssids_multiblock_ldlt( cudaStream_t *stream, ipc_ nblocks,
+      struct multiblock_fact_type *mbfdata, rpc_* f, rpc_ delta,
+      rpc_ eps, ipc_* index, ipc_* stat ) {
    dim3 threads(BLOCK_SIZE, 2*BLOCK_SIZE);
-   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-      int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+   for ( ipc_ i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
+      ipc_ nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_ldlt
-         < double, BLOCK_SIZE, MBLOCKS >
+         < rpc_, BLOCK_SIZE, MBLOCKS >
          <<< nb, threads, 0, *stream >>>
          ( mbfdata + i, f, delta, eps, index, stat );
    }
 }
 
-void spral_ssids_multiblock_ldlt_setup( cudaStream_t *stream, int nblocks,
+void spral_ssids_multiblock_ldlt_setup( cudaStream_t *stream, ipc_ nblocks,
       struct multinode_fact_type *ndata, struct multiblock_fact_type *mbfdata,
-      int step, int block_size, int blocks, int* stat, int* ind, int* ncb ) {
+      ipc_ step, ipc_ block_size, ipc_ blocks, ipc_* stat, ipc_* ind, ipc_* ncb ) {
    dim3 threads(10,8);
-   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-      int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+   for ( ipc_ i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
+      ipc_ nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_fact_setup
          <<< nb, threads, 0, *stream >>>
-         ( ndata + i, mbfdata, step, block_size, blocks, 
+         ( ndata + i, mbfdata, step, block_size, blocks,
          i, stat + i, ind + block_size*i, ncb );
    }
 }
 
-void spral_ssids_multiblock_llt( cudaStream_t *stream, int nblocks,
-      struct multiblock_fact_type *mbfdata, double* f, int* stat ) {
+void spral_ssids_multiblock_llt( cudaStream_t *stream, ipc_ nblocks,
+      struct multiblock_fact_type *mbfdata, rpc_* f, ipc_* stat ) {
    if ( nblocks < 1 )
       return;
 
-   int smsize = MCBLOCKS*BLOCK_SIZE*BLOCK_SIZE*sizeof(double);
+   ipc_ smsize = MCBLOCKS*BLOCK_SIZE*BLOCK_SIZE*sizeof(rpc_);
    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-      int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+   for ( ipc_ i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
+      ipc_ nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_chol
-         < double, BLOCK_SIZE, MCBLOCKS > 
+         < rpc_, BLOCK_SIZE, MCBLOCKS >
          <<< nb, threads, smsize, *stream >>>
          ( mbfdata + i, f, stat );
    }
 }
 
-void spral_ssids_multiblock_llt_setup( cudaStream_t *stream, int nblocks,
+void spral_ssids_multiblock_llt_setup( cudaStream_t *stream, ipc_ nblocks,
       struct multinode_fact_type *ndata, struct multiblock_fact_type *mbfdata,
-      int step, int block_size, int blocks, int* stat, int* ncb ) {
+      ipc_ step, ipc_ block_size, ipc_ blocks, ipc_* stat, ipc_* ncb ) {
    dim3 threads(16,8);
-   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-      int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+   for ( ipc_ i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
+      ipc_ nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_fact_setup
          <<< nb, threads, 0, *stream >>>
          ( ndata + i, mbfdata, step, block_size, blocks, i, stat + i, 0, ncb );
    }
 }
 
-void spral_ssids_square_ldlt( 
-            cudaStream_t *stream, 
-            int n, 
-            double* a, 
-            double* f, 
-            double* w,
-            double* d,
-            int ld,
-            double delta, double eps,
-            int* index,
-            int* stat
+void spral_ssids_square_ldlt(
+            cudaStream_t *stream,
+            ipc_ n,
+            rpc_* a,
+            rpc_* f,
+            rpc_* w,
+            rpc_* d,
+            ipc_ ld,
+            rpc_ delta, rpc_ eps,
+            ipc_* index,
+            ipc_* stat
            )
 {
-  int nt = min(n, 256);
-  int sm = nt*sizeof(double) + (nt + 2)*sizeof(int);
-  cu_square_ldlt< double ><<< 1, nt, sm, *stream >>>
+  ipc_ nt = min(n, 256);
+  ipc_ sm = nt*sizeof(rpc_) + (nt + 2)*sizeof(ipc_);
+  cu_square_ldlt< rpc_ ><<< 1, nt, sm, *stream >>>
     ( n, a, f, w, d, ld, delta, eps, index, stat );
 }
 

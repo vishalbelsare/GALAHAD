@@ -1,4 +1,4 @@
-! THIS VERSION: GALAHAD 3.3 - 04/05/2021 AT 14:45 GMT.
+! THIS VERSION: GALAHAD 4.1 - 2021-11-27 AT 13:45 GMT.
 PROGRAM GALAHAD_check_example
   USE GALAHAD_SMT_double   ! double precision version
   USE GALAHAD_USERDATA_double  ! double precision version
@@ -13,7 +13,7 @@ PROGRAM GALAHAD_check_example
   type( CHECK_control_type ) :: control
   type( CHECK_inform_type ) :: inform
   integer :: stat, Jne, Hne, m, n
-  real (kind = wp), parameter :: one = 1.0_wp, two = 2.0_wp, three = 3.0_wp
+  real (kind = wp), parameter :: two = 2.0_wp, three = 3.0_wp
   real (kind = wp), parameter :: four = 4.0_wp, five = 5.0_wp
   external funF, funC, funG, funJ, funH
   nlp%m   = 2 ;  nlp%n   = 3 ;  m = nlp%m    ;  n = nlp%n
@@ -28,10 +28,12 @@ PROGRAM GALAHAD_check_example
   allocate( nlp%H%row(Hne), nlp%H%col(Hne), nlp%H%val(Hne) )
   nlp%J%row = (/ 1, 1, 1, 2 /) ;  nlp%J%col = (/ 1, 2, 3, 2 /)
   nlp%H%row = (/ 2, 3, 3 /)    ;  nlp%H%col = (/ 2, 2, 3 /)
-  nlp%X = (/ four, three, two /) ;  nlp%X_l = -five ;  nlp%X_u = five ;  nlp%Y = (/ two, three /)
+  nlp%X = (/ four, three, two /) ;  nlp%X_l = -five ;  nlp%X_u = five
+  nlp%Y = (/ two, three /)
   call CHECK_initialize( control ) ;   control%print_level = 3
   inform%status = 1
-  call CHECK_verify( nlp, data, control, inform, userdata, funF, funC, funG, funJ, funH )
+  call CHECK_verify( nlp, data, control, inform, userdata, &
+                     funF, funC, funG, funJ, funH )
   call CHECK_terminate( data, control, inform )
 END PROGRAM GALAHAD_check_example
 
@@ -93,7 +95,7 @@ SUBROUTINE funH(status, X, Y, userdata, Hval)
   REAL ( kind = wp ), DIMENSION( : ), INTENT( IN ) :: Y
   REAL ( kind = wp ), DIMENSION( : ), INTENT( OUT ) ::Hval
   TYPE ( GALAHAD_userdata_type ), INTENT( INOUT ) :: userdata
-  Hval(1) =  2.0_wp * ( X(2) - Y(1) - Y(1)*X(3) + 6.0_wp*Y(2)*X(2)**2 )   
+  Hval(1) =  2.0_wp * ( X(2) - Y(1) - Y(1)*X(3) + 6.0_wp*Y(2)*X(2)**2 )
   Hval(2) = -2.0_wp * Y(1) * X(2)
   Hval(3) = -6.0_wp * Y(1) * X(3)
   status = 0

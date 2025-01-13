@@ -1,34 +1,31 @@
-! THIS VERSION: GALAHAD 2.6 - 13/05/2014 AT 15:00 GMT.
+! THIS VERSION: GALAHAD 4.1 - 2022-11-27 AT 14:00 GMT.
    PROGRAM GALAHAD_MIQR_EXAMPLE
    USE GALAHAD_MIQR_double         ! double precision version
    IMPLICIT NONE
    INTEGER, PARAMETER :: wp = KIND( 1.0D+0 ) ! set precision
    TYPE ( SMT_type ) :: mat
    TYPE ( MIQR_data_type ) :: data
-   TYPE ( MIQR_control_type ) :: control        
+   TYPE ( MIQR_control_type ) :: control
    TYPE ( MIQR_inform_type ) :: inform
    REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: SOL
    INTEGER :: s
    INTEGER, PARAMETER :: prob_number = 1
-   INTEGER, PARAMETER :: m_1 = 4, n_1 = 3, a_ne_1 = 5
-   INTEGER, PARAMETER :: m_2 = 3, n_2 = 3, a_ne_2 = 4
-   INTEGER, PARAMETER :: m_3 = 3, n_3 = 3, a_ne_3 = 4
 ! set problem data
    SELECT CASE ( prob_number )
-   CASE ( 2 ) 
+   CASE ( 2 )
      mat%m = 3 ; mat%n = 3 ; mat%ne = 4
-   CASE ( 3 ) 
+   CASE ( 3 )
      mat%m = 3 ; mat%n = 3 ; mat%ne = 4
    CASE DEFAULT
      mat%m = 4 ; mat%n = 3 ; mat%ne = 5
    END SELECT
-   ALLOCATE( mat%ptr( mat%m + 1 ), mat%col( mat%ne ), mat%val( mat%ne ) ) 
+   ALLOCATE( mat%ptr( mat%m + 1 ), mat%col( mat%ne ), mat%val( mat%ne ) )
    SELECT CASE ( prob_number )
-   CASE ( 2 ) 
+   CASE ( 2 )
      mat%ptr = (/ 1, 3, 4, 5 /)
      mat%col = (/ 1, 2, 1, 3 /)
      mat%val = (/ 1.0_wp, 2.0_wp, 3.0_wp, 4.0_wp /)
-   CASE ( 3 ) 
+   CASE ( 3 )
      mat%ptr = (/ 1, 3, 4, 5 /)
      mat%col = (/ 1, 2, 2, 3 /)
      mat%val = (/ 2.0_wp, 1.0_wp, 3.0_wp, 4.0_wp /)
@@ -46,9 +43,9 @@
    CALL MIQR_form( mat, data, control, inform ) ! form factors
    ALLOCATE( SOL( mat%n ) )
    SELECT CASE ( prob_number )
-   CASE ( 2 ) 
+   CASE ( 2 )
      SOL = (/ 14.0, 10.0, 48.0 /)
-   CASE ( 3 ) 
+   CASE ( 3 )
      SOL = (/ 8.0, 22.0, 48.0 /)
    CASE DEFAULT
      SOL = (/ 14.0, 42.0, 75.0 /)

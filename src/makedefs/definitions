@@ -1,23 +1,105 @@
 #  Standard GALAHAD makefile definitions
 
 #  Nick Gould, for GALAHAD production
-#  This version: 2022-01-02
+#  This version: 2024-11-23
 
 #  makefile shell
 
 SHELL = /bin/$(BINSHELL)
 
+ifeq "$(PRECIS)" "single_64"
+  DPREC = -DINTEGER_64 -DREAL_32 $(QUADREAL)
+  HSL_64 = _64
+  HSL_PRECIS = s_64
+  HSL_IPRECIS = i_64
+  HSL_LPRECIS = l_64
+else ifeq "$(PRECIS)" "quadruple_64"
+  DPREC = -DINTEGER_64 -DREAL_128 $(QUADREAL)
+  HSL_64 = _64
+  HSL_PRECIS = q_64
+  HSL_IPRECIS = i_64
+  HSL_LPRECIS = l_64
+else ifeq "$(PRECIS)" "double_64"
+  DPREC = -DINTEGER_64 $(QUADREAL)
+  HSL_64 = _64
+  HSL_PRECIS = d_64
+  HSL_IPRECIS = i_64
+  HSL_LPRECIS = l_64
+else ifeq "$(PRECIS)" "single"
+  DPREC = -DREAL_32 $(QUADREAL)
+  HSL_64 =
+  HSL_PRECIS = s
+  HSL_IPRECIS = i
+  HSL_LPRECIS = l
+else ifeq "$(PRECIS)" "quadruple"
+  DPREC = -DREAL_128 $(QUADREAL)
+  HSL_64 =
+  HSL_PRECIS = q
+  HSL_IPRECIS = i
+  HSL_LPRECIS = l
+else
+  DPREC = -DREAL_64 $(QUADREAL)
+  HSL_64 =
+  HSL_PRECIS = d
+  HSL_IPRECIS = i
+  HSL_LPRECIS = l
+endif
+
+ifeq "$(BLASTYPE)" "reference"
+  SUFF64 = -DNO_SYMBOL_INTEGER_64
+else ifeq "$(BLASTYPE)" "galahad"
+  SUFF64 =
+else ifeq "$(BLASTYPE)" "openblas"
+  SUFF64 = -DNO_UNDERSCORE_INTEGER_64
+else ifeq "$(BLASTYPE)" "mkl"
+  SUFF64 = -DNO_UNDERSCORE_INTEGER_64
+else ifeq "$(BLASTYPE)" "apple"
+  SUFF64 = -DDOUBLE_UNDERSCORE_INTEGER_64
+endif
+
+ifeq "$(METISVERSION)" "4"
+  USEMETIS = -DMETIS4
+else ifeq "$(METISVERSION)" "51"
+  USEMETIS = -DMETIS51
+else
+  USEMETIS =
+endif
+
+CPPDEFINES = $(DPREC) $(SUFF64) $(USEMETIS)
+
+ifeq "$(LINEARSOLVER)" "ma57"
+ DLINEARSOLVER = -DLANCELOT_USE_MA57
+else
+ DLINEARSOLVER = -DLANCELOT_USE_SILS
+endif
+
+#  source files for subset and archive subset
+
+HSLSRC = $(HSLSUBSET)/src
+HSLARCSRC = $(HSLARCHIVESUBSET)/src
+
 #  compiler flags
 
-FFLAGS    = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F90) $(USUAL)
-FFLAGSS   = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F90) $(SPECIAL)
-FFLAGSN   = $(BASIC) $(NOOPTIMIZATION) $(DEBUG) $(MODULES) $(F90)
-FFLAGS77  = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F77) $(USUAL)
-FFLAGS77S = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F77) $(SPECIAL)
-FFLAGSOMP = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F90) $(USUAL) \
-            $(OPENMP)
-CFLAGS    = $(CCBASIC) $(OPTIMIZATION) $(CCDEBUG)
-CFLAGSN   = $(CCBASIC) $(NOOPTIMIZATION) $(CCDEBUG)
+FFLAGS     = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F90) $(USUAL) \
+              $(CPPDEFINES) -I $(GALAHAD)/include
+FFLAGSS    = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F90) $(SPECIAL) \
+              $(CPPDEFINES) -I $(GALAHAD)/include
+FFLAGSN    = $(BASIC) $(NOOPTIMIZATION) $(DEBUG) $(MODULES) $(F90) \
+              $(CPPDEFINES) -I $(GALAHAD)/include
+FFLAGS77   = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F77) $(USUAL) \
+              $(CPPDEFINES) -I $(GALAHAD)/include
+FFLAGS77S  = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F77) $(SPECIAL) \
+              $(CPPDEFINES) -I $(GALAHAD)/include
+FFLAGSOMP  = $(BASIC) $(OPTIMIZATION) $(DEBUG) $(MODULES) $(F90) $(USUAL) \
+              $(CPPDEFINES) -I $(GALAHAD)/include $(OPENMP) 
+FFLAGSOMPN = $(BASIC) $(NOOPTIMIZATION) $(DEBUG) $(MODULES) $(F90) \
+              $(CPPDEFINES) -I $(GALAHAD)/include $(OPENMP) 
+CFLAGS     = $(CCBASIC) $(OPTIMIZATION) $(CCDEBUG) \
+              $(CPPDEFINES) -I $(GALAHAD)/include -I ./include
+CFLAGSN    = $(CCBASIC) $(NOOPTIMIZATION) $(CCDEBUG) \
+              $(CPPDEFINES) -I $(GALAHAD)/include -I ./include
+PYINCLUDES = -I $(NUMPYINCLUDE) -I $(GALAHAD)/include -I $(OBJ) \
+              -I $(PYTHONINCLUDE)
 
 #  coverage flags
 
@@ -26,7 +108,6 @@ COVERAGE = -fprofile-arcs -ftest-coverage
 #  linking and run flags
 
 RUNFFLAGS =    $(OPTIMIZATION) $(DEBUG) $(MODULES)
-#RUNFFLAGS =   $(OPTIMIZATION) $(DEBUG) $(MODULES) -L/usr/lib -llapack
 RUNFFLAGSOMP = $(OPTIMIZATION) $(DEBUG) $(MODULES) $(OPENMP)
 
 #  names of random libraries
@@ -34,60 +115,195 @@ RUNFFLAGSOMP = $(OPTIMIZATION) $(DEBUG) $(MODULES) $(OPENMP)
 LG  = $(OBJ)/libgalahad.a
 LGS = $(OBJS)/libgalahad.a
 LGD = $(OBJD)/libgalahad.a
+LGQ = $(OBJQ)/libgalahad.a
+LGS64 = $(OBJS64)/libgalahad.a
+LGD64 = $(OBJD64)/libgalahad.a
+LGQ64 = $(OBJQ64)/libgalahad.a
 
 BLG  = $(OBJ)/libgalahad_blas.a
 BLGS = $(OBJS)/libgalahad_blas.a
 BLGD = $(OBJD)/libgalahad_blas.a
+BLGQ = $(OBJQ)/libgalahad_blas.a
+BLGS64 = $(OBJS64)/libgalahad_blas.a
+BLGD64 = $(OBJD64)/libgalahad_blas.a
+BLGQ64 = $(OBJQ64)/libgalahad_blas.a
 
 CLG  = $(OBJ)/libgalahad_c.a
 CLGS = $(OBJS)/libgalahad_c.a
 CLGD = $(OBJD)/libgalahad_c.a
+CLGQ = $(OBJQ)/libgalahad_c.a
+CLGS64 = $(OBJS64)/libgalahad_c.a
+CLGD64 = $(OBJD64)/libgalahad_c.a
+CLGQ64 = $(OBJQ64)/libgalahad_c.a
+
+CULG  = $(OBJ)/libgalahad_cutest.a
+CULGS = $(OBJS)/libgalahad_cutest.a
+CULGD = $(OBJD)/libgalahad_cutest.a
+CULGQ = $(OBJQ)/libgalahad_cutest.a
+CULGS64 = $(OBJS64)/libgalahad_cutest.a
+CULGD64 = $(OBJD64)/libgalahad_cutest.a
+CULGQ64 = $(OBJQ64)/libgalahad_cutest.a
+
+CDLG  = $(OBJ)/libgalahad_cutest_dummy.a
+CDLGS = $(OBJS)/libgalahad_cutest_dummy.a
+CDLGD = $(OBJD)/libgalahad_cutest_dummy.a
+CDLGQ = $(OBJQ)/libgalahad_cutest_dummy.a
+CDLGS64 = $(OBJS64)/libgalahad_cutest_dummy.a
+CDLGD64 = $(OBJD64)/libgalahad_cutest_dummy.a
+CDLGQ64 = $(OBJQ64)/libgalahad_cutest_dummy.a
 
 DLG  = $(OBJ)/libgalahad_dummy.a
 DLGS = $(OBJS)/libgalahad_dummy.a
 DLGD = $(OBJD)/libgalahad_dummy.a
+DLGQ = $(OBJQ)/libgalahad_dummy.a
+DLGS64 = $(OBJS64)/libgalahad_dummy.a
+DLGD64 = $(OBJD64)/libgalahad_dummy.a
+DLGQ64 = $(OBJQ64)/libgalahad_dummy.a
 
 HLG  = $(OBJ)/libgalahad_hsl.a
 HLGS = $(OBJS)/libgalahad_hsl.a
 HLGD = $(OBJD)/libgalahad_hsl.a
+HLGQ = $(OBJQ)/libgalahad_hsl.a
+HLGS64 = $(OBJS64)/libgalahad_hsl.a
+HLGD64 = $(OBJD64)/libgalahad_hsl.a
+HLGQ64 = $(OBJQ64)/libgalahad_hsl.a
 
 HCLG  = $(OBJ)/libgalahad_hsl_c.a
 HCLGS = $(OBJS)/libgalahad_hsl_c.a
 HCLGD = $(OBJD)/libgalahad_hsl_c.a
+HCLGQ = $(OBJQ)/libgalahad_hsl_c.a
+HCLGS64 = $(OBJS64)/libgalahad_hsl_c.a
+HCLGD64 = $(OBJD64)/libgalahad_hsl_c.a
+HCLGQ64 = $(OBJQ64)/libgalahad_hsl_c.a
 
 LLG  = $(OBJ)/libgalahad_lapack.a
 LLGS = $(OBJS)/libgalahad_lapack.a
 LLGD = $(OBJD)/libgalahad_lapack.a
+LLGQ = $(OBJQ)/libgalahad_lapack.a
+LLGS64 = $(OBJS64)/libgalahad_lapack.a
+LLGD64 = $(OBJD64)/libgalahad_lapack.a
+LLGQ64 = $(OBJQ64)/libgalahad_lapack.a
 
-MLG  = $(OBJ)/libgalahad_metis.a
-MLGS = $(OBJS)/libgalahad_metis.a
-MLGD = $(OBJD)/libgalahad_metis.a
+MSTATIC = libmetis_nodend.a
+MSTATIC64 = libmetis64_nodend.a
+LM  = $(OBJ)/$(MSTATIC)
+LM64 = $(OBJ)/$(MSTATIC64)
+LMS = $(OBJS)/$(MSTATIC)
+LMD = $(OBJD)/$(MSTATIC)
+LMQ = $(OBJQ)/$(MSTATIC)
+LMS64 = $(OBJS64)/$(MSTATIC64)
+LMD64 = $(OBJD64)/$(MSTATIC64)
+LMQ64 = $(OBJQ64)/$(MSTATIC64)
+
+M4LG  = $(OBJ)/libgalahad_metis4.a
+M4LGS = $(OBJS)/libgalahad_metis4.a
+M4LGD = $(OBJD)/libgalahad_metis4.a
+M4LGQ = $(OBJQ)/libgalahad_metis4.a
+M4LGS64 = $(OBJS64)/libgalahad_metis4.a
+M4LGD64 = $(OBJD64)/libgalahad_metis4.a
+M4LGQ64 = $(OBJQ64)/libgalahad_metis4.a
+
+M5LG  = $(OBJ)/libgalahad_metis5.a
+M5LGS = $(OBJS)/libgalahad_metis5.a
+M5LGD = $(OBJD)/libgalahad_metis5.a
+M5LGQ = $(OBJQ)/libgalahad_metis5.a
+M5LGS64 = $(OBJS64)/libgalahad_metis5.a
+M5LGD64 = $(OBJD64)/libgalahad_metis5.a
+M5LGQ64 = $(OBJQ64)/libgalahad_metis5.a
+
+MDLG  = $(OBJ)/libgalahad_metis_dummy.a
+MDLGS = $(OBJS)/libgalahad_metis_dummy.a
+MDLGD = $(OBJD)/libgalahad_metis_dummy.a
+MDLGQ = $(OBJQ)/libgalahad_metis_dummy.a
+MDLGS64 = $(OBJS64)/libgalahad_metis_dummy.a
+MDLGD64 = $(OBJD64)/libgalahad_metis_dummy.a
+MDLGQ64 = $(OBJQ64)/libgalahad_metis_dummy.a
 
 MPLG  = $(OBJ)/libgalahad_mkl_pardiso.a
 MPLGS = $(OBJS)/libgalahad_mkl_pardiso.a
 MPLGD = $(OBJD)/libgalahad_mkl_pardiso.a
+MPLGQ = $(OBJQ)/libgalahad_mkl_pardiso.a
+MPLGS64 = $(OBJS64)/libgalahad_mkl_pardiso.a
+MPLGD64 = $(OBJD64)/libgalahad_mkl_pardiso.a
+MPLGQ64 = $(OBJQ64)/libgalahad_mkl_pardiso.a
+
+MPILG  = $(OBJ)/libgalahad_mpi.a
+MPILGS = $(OBJS)/libgalahad_mpi.a
+MPILGD = $(OBJD)/libgalahad_mpi.a
+MPILGQ = $(OBJQ)/libgalahad_mpi.a
+MPILGS64 = $(OBJS64)/libgalahad_mpi.a
+MPILGD64 = $(OBJD64)/libgalahad_mpi.a
+MPILGQ64 = $(OBJQ64)/libgalahad_mpi.a
+
+MULG  = $(OBJ)/libgalahad_mumps.a
+MULGS = $(OBJS)/libgalahad_mumps.a
+MULGD = $(OBJD)/libgalahad_mumps.a
+MULGQ = $(OBJQ)/libgalahad_mumps.a
+MULGS64 = $(OBJS64)/libgalahad_mumps.a
+MULGD64 = $(OBJD64)/libgalahad_mumps.a
+MULGQ64 = $(OBJQ64)/libgalahad_mumps.a
 
 PLG  = $(OBJ)/libgalahad_pardiso.a
 PLGS = $(OBJS)/libgalahad_pardiso.a
 PLGD = $(OBJD)/libgalahad_pardiso.a
+PLGQ = $(OBJQ)/libgalahad_pardiso.a
+PLGS64 = $(OBJS64)/libgalahad_pardiso.a
+PLGD64 = $(OBJD64)/libgalahad_pardiso.a
+PLGQ64 = $(OBJQ64)/libgalahad_pardiso.a
 
 PRLG  = $(OBJ)/libgalahad_problem.a
 PRLGS = $(OBJS)/libgalahad_problem.a
 PRLGD = $(OBJD)/libgalahad_problem.a
+PRLGQ = $(OBJQ)/libgalahad_problem.a
+PRLGS64 = $(OBJS64)/libgalahad_problem.a
+PRLGD64 = $(OBJD64)/libgalahad_problem.a
+PRLGQ64 = $(OBJQ64)/libgalahad_problem.a
+
+PXLG  = $(OBJ)/libgalahad_pastix.a
+PXLGS = $(OBJS)/libgalahad_pastix.a
+PXLGD = $(OBJD)/libgalahad_pastix.a
+PXLGQ = $(OBJQ)/libgalahad_pastix.a
+PXLGS64 = $(OBJS64)/libgalahad_pastix.a
+PXLGD64 = $(OBJD64)/libgalahad_pastix.a
+PXLGQ64 = $(OBJQ64)/libgalahad_pastix.a
+
+PYLG  = $(OBJ)/libgalahad_py.a
+PYLGS = $(OBJS)/libgalahad_py.a
+PYLGD = $(OBJD)/libgalahad_py.a
+PYLGQ = $(OBJQ)/libgalahad_py.a
+PYLGS64 = $(OBJS64)/libgalahad_py.a
+PYLGD64 = $(OBJD64)/libgalahad_py.a
+PYLGQ64 = $(OBJQ64)/libgalahad_py.a
 
 RLG  = $(OBJ)/libgalahad_spral.a
 RLGS = $(OBJS)/libgalahad_spral.a
 RLGD = $(OBJD)/libgalahad_spral.a
+RLGQ = $(OBJQ)/libgalahad_spral.a
+RLGS64 = $(OBJS64)/libgalahad_spral.a
+RLGD64 = $(OBJD64)/libgalahad_spral.a
+RLGQ64 = $(OBJQ64)/libgalahad_spral.a
+
+ULG  = $(OBJ)/libgalahad_umfpack.a
+ULGS = $(OBJS)/libgalahad_umfpack.a
+ULGD = $(OBJD)/libgalahad_umfpack.a
+ULGQ = $(OBJQ)/libgalahad_umfpack.a
+ULGS64 = $(OBJS64)/libgalahad_umfpack.a
+ULGD64 = $(OBJD64)/libgalahad_umfpack.a
+ULGQ64 = $(OBJQ64)/libgalahad_umfpack.a
 
 WLG  = $(OBJ)/libgalahad_wsmp.a
 WLGS = $(OBJS)/libgalahad_wsmp.a
 WLGD = $(OBJD)/libgalahad_wsmp.a
+WLGQ = $(OBJQ)/libgalahad_wsmp.a
+WLGS64 = $(OBJS64)/libgalahad_wsmp.a
+WLGD64 = $(OBJD64)/libgalahad_wsmp.a
+WLGQ64 = $(OBJQ64)/libgalahad_wsmp.a
 
 #  archive manipulation strings
 
 ARR = $(AR) $(ARREPFLAGS) $(LG)
 RMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(LG)
-RMARFILES = $(GALAHAD)/bin/rmarfiles $(AR) $(GREP) $(LG)
+RMARFILES = $(GALAHAD)/bin/rmarfiles $(AR) $(GREP) $(LG) $(PRECIS)
 RMOBFILE = $(GALAHAD)/bin/rmobfile $(RM) $(OBJ)
 
 BARR = $(AR) $(ARREPFLAGS) $(BLG)
@@ -95,7 +311,13 @@ BRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(BLG)
 
 CARR = $(AR) $(ARREPFLAGS) $(CLG)
 CRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(CLG)
-CRMARFILES = $(GALAHAD)/bin/rmarfiles $(AR) $(GREP) $(CLG)
+CRMARFILES = $(GALAHAD)/bin/rmarfiles $(AR) $(GREP) $(CLG) $(PRECIS)
+
+CUARR = $(AR) $(ARREPFLAGS) $(CULG)
+CURMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(CULG)
+
+CDARR = $(AR) $(ARREPFLAGS) $(CDLG)
+CDRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(CDLG)
 
 DARR = $(AR) $(ARREPFLAGS) $(DLG)
 DRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(DLG)
@@ -109,32 +331,59 @@ HCRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(HCLG)
 LARR = $(AR) $(ARREPFLAGS) $(LLG)
 LRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(LLG)
 
-MARR = $(AR) $(ARREPFLAGS) $(MLG)
-MRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $MLG)
+MARR = $(AR) $(ARREPFLAGS)
+
+M4ARR = $(AR) $(ARREPFLAGS) $(M4LG)
+M4RMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(M4LG)
+
+M5ARR = $(AR) $(ARREPFLAGS) $(M5LG)
+M5RMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(M5LG)
+
+MDARR = $(AR) $(ARREPFLAGS) $(MDLG)
+MDRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(MDLG)
 
 MPARR = $(AR) $(ARREPFLAGS) $(MPLG)
-MPRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $MPLG)
+MPRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(MPLG)
+
+MPIARR = $(AR) $(ARREPFLAGS) $(MPILG)
+MPIRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(MPILG)
+
+MUARR = $(AR) $(ARREPFLAGS) $(MULG)
+MURMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(MULG)
 
 PARR = $(AR) $(ARREPFLAGS) $(PLG)
-PRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $PLG)
+PRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(PLG)
 
 PRARR = $(AR) $(ARREPFLAGS) $(PRLG)
 PRRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(PRLG)
 
+PXARR = $(AR) $(ARREPFLAGS) $(PXLG)
+PXRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(PXLG)
+
+PYARR = $(AR) $(ARREPFLAGS) $(PYLG)
+PYRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(PYLG)
+PYRMARFILES = $(GALAHAD)/bin/rmpyarfiles $(AR) $(GREP) $(PYLG)
+
 RARR = $(AR) $(ARREPFLAGS) $(RLG)
-RRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $RLG)
+RRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(RLG)
+
+UARR = $(AR) $(ARREPFLAGS) $(ULG)
+URMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(ULG)
 
 WARR = $(AR) $(ARREPFLAGS) $(WLG)
-WRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $WLG)
+WRMARFILE = $(GALAHAD)/bin/rmarfile $(AR) $(GREP) $(WLG)
 
 #  linear solver choices
 
 SMTS = $(LINEARSOLVER)_smts
 SMTD = $(LINEARSOLVER)_smtd
+SMTQ = $(LINEARSOLVER)_smtq
 LINEARSOLVERS = $(LINEARSOLVER)s
 LINEARSOLVERD = $(LINEARSOLVER)d
+LINEARSOLVERQ = $(LINEARSOLVER)q
 ULINEARSOLVERS = $(ULINEARSOLVER)s
 ULINEARSOLVERD = $(ULINEARSOLVER)d
+ULINEARSOLVERQ = $(ULINEARSOLVER)q
 
 #  sed scripts
 
@@ -147,6 +396,7 @@ LPSEDS = $(GALAHAD)/seds/$(LINEARSOLVER)_precon.sed
 
 SUCC = precision version) compiled successfully
 SUCC_C = precision version) for C compiled successfully
+SUCC_PY = precision version) for python compiled successfully
 SUCC_CUTEST = precision version) for CUTEst compiled successfully
 SUCC_AMPL = precision version) for AMPL compiled successfully
 SUCC_QPLIB = precision version) for QPLIB compiled successfully
@@ -161,11 +411,24 @@ RMOOC = $(RM) factor_integer_ooc* factor_real_ooc* \
 
 CUTEST_TESTS = make_copyright make_userdata make_tools make_norms \
                make_nlpt make_cutest_functions
+#CUTEST_TESTS = make_cutest_functions
 
 #  packages that are needed for QPLIB tests
 
-QPLIB_TESTS = make_copyright make_scaling make_rpd
+QPLIB_TESTS = make_copyright make_scale make_rpd
 
 #  packages that are needed for Rutherford-Boeing tests
 
 RB_TESTS = make_copyright
+
+#  valgrind options if needed
+
+#VALGRIND = --tool=memcheck --leak-check=full --show-reachable=yes \
+#VALGRIND = -v --tool=memcheck --leak-check=yes --show-reachable=yes \
+#--track-origins=yes -s
+VALGRIND = -v --tool=memcheck --leak-check=full --show-reachable=yes \
+--track-origins=yes -s
+
+#  gdb options if needed
+
+GDB = -silent -ex run -ex bt -ex exit

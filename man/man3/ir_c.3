@@ -1,14 +1,18 @@
-.TH "ir.h" 3 "Sun Mar 20 2022" "C interfaces to GALAHAD IR" \" -*- nroff -*-
+.TH "galahad_ir.h" 3 "Thu Jun 22 2023" "C interfaces to GALAHAD IR" \" -*- nroff -*-
 .ad l
 .nh
 .SH NAME
-ir.h
+galahad_ir.h
 .SH SYNOPSIS
 .br
 .PP
 \fC#include <stdbool\&.h>\fP
 .br
+\fC#include <stdint\&.h>\fP
+.br
 \fC#include 'galahad_precision\&.h'\fP
+.br
+\fC#include 'galahad_cfunctions\&.h'\fP
 .br
 
 .SS "Data Structures"
@@ -19,6 +23,19 @@ ir.h
 .br
 .ti -1c
 .RI "struct \fBir_inform_type\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBir_initialize\fP (void **data, struct \fBir_control_type\fP *control, int *status)"
+.br
+.ti -1c
+.RI "void \fBir_information\fP (void **data, struct \fBir_inform_type\fP *inform, int *status)"
+.br
+.ti -1c
+.RI "void \fBir_terminate\fP (void **data, struct \fBir_control_type\fP *control, struct \fBir_inform_type\fP *inform)"
 .br
 .in -1c
 .SH "Detailed Description"
@@ -34,6 +51,8 @@ Currently, only the control and inform parameters are exposed; these are provide
 N\&. I\&. M\&. Gould, STFC-Rutherford Appleton Laboratory, England\&.
 .PP
 C interface, additionally J\&. Fowkes, STFC-Rutherford Appleton Laboratory\&.
+.PP
+Julia interface, additionally A\&. Montoison and D\&. Orban, Polytechnique Montréal\&.
 .SS "Originally released"
 October 2008, C interface January 2022 
 .SH "Data Structure Documentation"
@@ -88,33 +107,86 @@ inform derived type as a C struct
 .PP
 \fBData Fields:\fP
 .RS 4
-int \fIstatus\fP reported return status: 
+int \fIstatus\fP the return status\&. Possible values are: 
 .PD 0
 
 .IP "\(bu" 2
-0 the solution has been found 
+0 the solution has been found\&. 
 .IP "\(bu" 2
--1 an array allocation has failed 
+-1\&. An allocation error occurred\&. A message indicating the offending array is written on unit control\&.error, and the returned allocation status and a string containing the name of the offending array are held in inform\&.alloc_status and inform\&.bad_alloc respectively\&. 
 .IP "\(bu" 2
--2 an array deallocation has failed 
+-2\&. A deallocation error occurred\&. A message indicating the offending array is written on unit control\&.error and the returned allocation status and a string containing the name of the offending array are held in inform\&.alloc_status and inform\&.bad_alloc respectively\&. 
+.IP "\(bu" 2
+-11\&. Iterative refinement has not reduced the relative residual by more than control\&.required_relative_residual\&. 
 .PP
 
 .br
 .PP
-int \fIalloc_status\fP STAT value after allocate failure\&. 
+int \fIalloc_status\fP the status of the last attempted allocation/deallocation\&. 
 .br
 .PP
-char \fIbad_alloc[81]\fP name of array which provoked an allocate failure 
+char \fIbad_alloc[81]\fP the name of the array for which an allocation/deallocation error occurred\&. 
 .br
 .PP
-real_wp_ \fInorm_initial_residual\fP infinity norm of the initial residual 
+real_wp_ \fInorm_initial_residual\fP the infinity norm of the initial residual 
 .br
 .PP
-real_wp_ \fInorm_final_residual\fP infinity norm of the final residual 
+real_wp_ \fInorm_final_residual\fP the infinity norm of the final residual 
 .br
 .PP
 .RE
 .PP
+.SH "Function Documentation"
+.PP 
+.SS "void ir_initialize (void ** data, struct \fBir_control_type\fP * control, int * status)"
+Set default control values and initialize private data
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIcontrol\fP is a struct containing control information (see \fBir_control_type\fP)
+.br
+\fIstatus\fP is a scalar variable of type int, that gives the exit status from the package\&. Possible values are (currently): 
+.PD 0
+
+.IP "\(bu" 2
+0\&. The initialization was succesful\&. 
+.PP
+.RE
+.PP
+
+.SS "void ir_information (void ** data, struct \fBir_inform_type\fP * inform, int * status)"
+Provides output information
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIinform\fP is a struct containing output information (see \fBir_inform_type\fP)
+.br
+\fIstatus\fP is a scalar variable of type int, that gives the exit status from the package\&. Possible values are (currently): 
+.PD 0
+
+.IP "\(bu" 2
+0\&. The values were recorded succesfully 
+.PP
+.RE
+.PP
+
+.SS "void ir_terminate (void ** data, struct \fBir_control_type\fP * control, struct \fBir_inform_type\fP * inform)"
+Deallocate all internal private storage
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIcontrol\fP is a struct containing control information (see \fBir_control_type\fP)
+.br
+\fIinform\fP is a struct containing output information (see \fBir_inform_type\fP) 
+.RE
+.PP
+
 .SH "Author"
 .PP 
 Generated automatically by Doxygen for C interfaces to GALAHAD IR from the source code\&.

@@ -1,14 +1,18 @@
-.TH "rpd.h" 3 "Sun Mar 20 2022" "C interfaces to GALAHAD RPD" \" -*- nroff -*-
+.TH "galahad_rpd.h" 3 "Thu Jun 22 2023" "C interfaces to GALAHAD RPD" \" -*- nroff -*-
 .ad l
 .nh
 .SH NAME
-rpd.h
+galahad_rpd.h
 .SH SYNOPSIS
 .br
 .PP
 \fC#include <stdbool\&.h>\fP
 .br
+\fC#include <stdint\&.h>\fP
+.br
 \fC#include 'galahad_precision\&.h'\fP
+.br
+\fC#include 'galahad_cfunctions\&.h'\fP
 .br
 
 .SS "Data Structures"
@@ -64,6 +68,9 @@ rpd.h
 .RI "void \fBrpd_get_z\fP (void **data, int *status, int n, real_wp_ z[])"
 .br
 .ti -1c
+.RI "void \fBrpd_information\fP (void **data, struct \fBrpd_inform_type\fP *inform, int *status)"
+.br
+.ti -1c
 .RI "void \fBrpd_terminate\fP (void **data, struct \fBrpd_control_type\fP *control, struct \fBrpd_inform_type\fP *inform)"
 .br
 .in -1c
@@ -107,6 +114,8 @@ Read and write data for the linear program (LP) \[\mbox{minimize}\;\; g^T x + f 
 N\&. I\&. M\&. Gould, STFC-Rutherford Appleton Laboratory, England\&.
 .PP
 C interface, additionally J\&. Fowkes, STFC-Rutherford Appleton Laboratory\&.
+.PP
+Julia interface, additionally A\&. Montoison and D\&. Orban, Polytechnique Montréal\&.
 .SS "Originally released"
 January 2006, C interface January 2022\&.
 .SS "Reference"
@@ -218,17 +227,17 @@ int \fIstatus\fP return status\&. Possible values are:
 .PD 0
 
 .IP "\(bu" 2
-0 successful return 
+0 The call was successful\&. 
 .IP "\(bu" 2
--1 allocation failure 
+-1\&. An allocation error occurred\&. A message indicating the offending array is written on unit control\&.error, and the returned allocation status and a string containing the name of the offending array are held in inform\&.alloc_status and inform\&.bad_alloc respectively\&. 
 .IP "\(bu" 2
--2 deallocation failure 
+-2\&. A deallocation error occurred\&. A message indicating the offending array is written on unit control\&.error and the returned allocation status and a string containing the name of the offending array are held in inform\&.alloc_status and inform\&.bad_alloc respectively\&. 
 .IP "\(bu" 2
--3 end of file reached prematurely 
+-22 An input/outpur error occurred\&. 
 .IP "\(bu" 2
--4 other read error 
+-25 The end of the input file was reached prematurely\&. 
 .IP "\(bu" 2
--5 unrecognised type 
+-29 The problem type was not recognised\&. 
 .PP
 
 .br
@@ -236,7 +245,7 @@ int \fIstatus\fP return status\&. Possible values are:
 int \fIalloc_status\fP the status of the last attempted allocation or deallocation 
 .br
 .PP
-char \fIbad_alloc[81]\fP the name of the array for which an allocation or deallocation error ocurred 
+char \fIbad_alloc[81]\fP the name of the array for which an allocation or deallocation error occurred 
 .br
 .PP
 int \fIio_status\fP status from last read attempt 
@@ -636,6 +645,24 @@ Recover the initial values of the dual variables z\&.
 \fIn\fP is a scalar variable of type int, that holds the number of variables\&.
 .br
 \fIz\fP is a one-dimensional array of size n and type double, that gives the initial values z of the dual variables\&. The j-th component of z, j = 0, \&.\&.\&. , n-1, contains z_j\&. 
+.RE
+.PP
+
+.SS "void rpd_information (void ** data, struct \fBrpd_inform_type\fP * inform, int * status)"
+Provides output information
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP holds private internal data
+.br
+\fIinform\fP is a struct containing output information (see \fBrpd_inform_type\fP)
+.br
+\fIstatus\fP is a scalar variable of type int, that gives the exit status from the package\&. Possible values are (currently): 
+.PD 0
+
+.IP "\(bu" 2
+0\&. The values were recorded succesfully 
+.PP
 .RE
 .PP
 

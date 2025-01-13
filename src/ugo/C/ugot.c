@@ -3,24 +3,30 @@
 
 #include <stdio.h>
 #include <math.h>
-#include "ugo.h"
+#include "galahad_precision.h"
+#include "galahad_cfunctions.h"
+#include "galahad_ugo.h"
+#include <string.h>
+#ifdef REAL_128
+#include <quadmath.h>
+#endif
 
 // Test problem objective
-double objf(double x){
-    double a = 10.0;
+rpc_ objf(rpc_ x){
+    rpc_ a = 10.0;
     return x * x * cos( a*x );
 }
 
 // Test problem first derivative
-double gradf(double x){
-    double a = 10.0;
+rpc_ gradf(rpc_ x){
+    rpc_ a = 10.0;
     return - a * x * x * sin( a*x ) + 2.0 * x * cos( a*x );
 }
 
 // Test problem second derivative
-double hessf(double x){
-    double a = 10.0;
-    return - a * a* x * x * cos( a*x ) - 4.0 * a * x * sin( a*x ) 
+rpc_ hessf(rpc_ x){
+    rpc_ a = 10.0;
+    return - a * a* x * x * cos( a*x ) - 4.0 * a * x * sin( a*x )
             + 2.0 * cos( a*x );
 }
 
@@ -32,30 +38,31 @@ int main(void) {
     struct ugo_inform_type inform;
 
     // Initialize UGO
-    int status, eval_status;
+    ipc_ status, eval_status;
     ugo_initialize( &data, &control, &status );
 
     // Set user-defined control options
     //control.print_level = 1;
     //control.maxit = 100;
     //control.lipschitz_estimate_used = 3;
+    strcpy(control.prefix, "'ugo: '");
 
     // Read options from specfile
     char specfile[] = "UGO.SPC";
     ugo_read_specfile(&control, specfile);
 
     // Test problem bounds
-    double x_l = -1.0; 
-    double x_u = 2.0;
+    rpc_ x_l = -1.0;
+    rpc_ x_u = 2.0;
 
     // Test problem objective, gradient, Hessian values
-    double x, f, g, h;
+    rpc_ x, f, g, h;
 
     // import problem data
     ugo_import( &control, &data, &status, &x_l, &x_u );
 
     // Set for initial entry
-    status = 1; 
+    status = 1;
 
     // Solve the problem: min f(x), x_l <= x <= x_u
     while(true){
@@ -80,21 +87,16 @@ int main(void) {
     ugo_information( &data, &inform, &status );
 
     if(inform.status == 0){
-        printf("%i evaluations. Optimal objective value = %5.2f"
-          " status = %1i\n", inform.f_eval, f, inform.status);
+#ifdef REAL_128
+// interim replacement for quad output: $GALAHAD/include/galahad_pquad_ef.h
+#include "galahad_pquad_ef.h"
+#else
+        printf("%" i_ipc_ " evaluations. Optimal objective value = %.2f"
+          " status = %1" i_ipc_ "\n", inform.f_eval, f, inform.status);
+#endif
     }else{
-        printf("BGO_solve exit status = %1i\n", inform.status);
+        printf("UGO_solve exit status = %1" i_ipc_ "\n", inform.status);
     }
-
-    // Print solution details
-    // printf("iter: %d \n", inform.iter);
-    // printf("x: %f \n", x);
-    // printf("f: %f \n", f);
-    // printf("g: %f \n", g);
-    // printf("h: %f \n", h);
-    // printf("f_eval: %d \n", inform.f_eval);
-    // printf("time: %f \n", inform.time.clock_total);
-    // printf("status: %d \n", inform.status);
 
     // Delete internal workspace
     ugo_terminate( &data, &control, &inform );

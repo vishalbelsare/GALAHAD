@@ -81,6 +81,45 @@ catch excpt
 end
 
 try
+    pkg = 'BLLSB';
+    disp(sprintf('******* Testing %s *******', pkg));
+    ntests = ntests + 1;
+    test_galahad_bllsb
+    if inform.status ~= 0
+        pkg_failures = pkg_failures + 1;
+    end
+catch excpt
+    disp(sprintf('%d %d\n', err, pkg));
+    syntax_errors = syntax_errors + 1;
+end
+
+try
+    pkg = 'SLLS';
+    disp(sprintf('******* Testing %s *******', pkg));
+    ntests = ntests + 1;
+    test_galahad_slls
+    if inform.status ~= 0
+        pkg_failures = pkg_failures + 1;
+    end
+catch excpt
+    disp(sprintf('%d %d\n', err, pkg));
+    syntax_errors = syntax_errors + 1;
+end
+
+try
+    pkg = 'CLLS';
+    disp(sprintf('******* Testing %s *******', pkg));
+    ntests = ntests + 1;
+    test_galahad_clls
+    if inform.status ~= 0
+        pkg_failures = pkg_failures + 1;
+    end
+catch excpt
+    disp(sprintf('%d %d\n', err, pkg));
+    syntax_errors = syntax_errors + 1;
+end
+
+try
     pkg = 'DGO';
     disp(sprintf('******* Testing %s *******', pkg));
     ntests = ntests + 1;
@@ -341,18 +380,18 @@ catch excpt
     syntax_errors = syntax_errors + 1;
 end
 
-try
-    pkg = 'SILS';
-    disp(sprintf('******* Testing %s *******', pkg));
-    ntests = ntests + 1;
-    test_galahad_sils
-    if inform.flag ~= 0
-        pkg_failures = pkg_failures + 1;
-    end
-catch excpt
-    disp(sprintf('%d %d\n', err, pkg));
-    syntax_errors = syntax_errors + 1;
-end
+%try
+%    pkg = 'SILS';
+%    disp(sprintf('******* Testing %s *******', pkg));
+%    ntests = ntests + 1;
+%    test_galahad_sils
+%    if inform.flag ~= 0
+%        pkg_failures = pkg_failures + 1;
+%    end
+%catch excpt
+%    disp(sprintf('%d %d\n', err, pkg));
+%    syntax_errors = syntax_errors + 1;
+%end
 
 try
     pkg = 'SLS';
